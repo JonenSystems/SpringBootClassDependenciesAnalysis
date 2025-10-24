@@ -127,11 +127,17 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[UserController<br/>@RestController] --> B[UserService<br/>@Service]
-    B --> C[UserRepository<br/>@Repository]
-    C --> D[UserEntity<br/>@Entity]
-    B --> E[SecurityFilterChain<br/>@Bean]
-    B --> F[PasswordEncoder<br/>@Bean]
+    A["UserController
+    @RestController"] --> B["UserService
+    @Service"]
+    B --> C["UserRepository
+    @Repository"]
+    C --> D["UserEntity
+    @Entity"]
+    B --> E["SecurityFilterChain
+    @Bean"]
+    B --> F["PasswordEncoder
+    @Bean"]
 ```
 
 このように、Spring Bootアプリの構造は「依存線の集合」で表せます。
