@@ -93,8 +93,8 @@ public void orderProcess() {
 
 ```mermaid
 graph LR
-    Client --> ProxyClass["Proxy Service"
-"(@Transactional)"]
+    Client --> ProxyClass["Proxy Service
+(@Transactional)"]
     ProxyClass --> RealService
     ProxyClass --> TransactionManager
 ```
@@ -123,10 +123,10 @@ spring-boot-starter-web
 
 ```mermaid
 graph TD
-    A[@RestController] --> B[@Service]
-    B --> C[@Repository]
-    B -.AOP.-> D[@Transactional]
-    B -.DI.-> E[@Bean PasswordEncoder]
+    A["@RestController"] --> B["@Service"]
+    B --> C["@Repository"]
+    B -.AOP.-> D["@Transactional"]
+    B -.DI.-> E["@Bean PasswordEncoder"]
 ```
 
 ---
