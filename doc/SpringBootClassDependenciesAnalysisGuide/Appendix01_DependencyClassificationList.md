@@ -1,4 +1,5 @@
 |No|カテゴリ|サブカテゴリ|説明|代表例(Java記法)|解析シグナル|対象スコープ|依存フレームワーク|
+|----|----|----|----|----|----|----|----|
 |1|型依存|継承(extends)|クラスが親クラスを継承する|class OrderService extends BaseService|extends句/継承階層|クラス|Java|
 |2|型依存|実装(implements)|クラスがインタフェースを実装する|class UserService implements UserDetailsService|implements句|クラス|Java|
 |3|型依存|型参照(import/qualified)|他クラスを型として参照する|import com.example.User; User u;|import文/修飾名参照|クラス/メソッド/フィールド|Java|
