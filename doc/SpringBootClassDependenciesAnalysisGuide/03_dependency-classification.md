@@ -50,19 +50,21 @@ Spring Bootアプリでは、数百〜数千のクラスが互いに依存して
 ```mermaid
 graph TD
     subgraph Web層
-        A[Controller<br>@RestController]
+        A["Controller
+@RestController"]
     end
     subgraph Service層
-        B[Service<br>@Service]
+        B["Service
+@Service"]
     end
     subgraph Repository層
-        C[Repository<br>@Repository]
-        D[Entity<br>@Entity]
+        C["Repository"<br>"@Repository"]
+        D["Entity"<br>"@Entity"]
     end
     subgraph CrossCutting
-        E[Security<br>@PreAuthorize / @Bean]
-        F[AOP<br>@Transactional / @Aspect]
-        G[Config<br>@ConfigurationProperties]
+        E["Security"<br>"@PreAuthorize / @Bean"]
+        F["AOP"<br>"@Transactional / @Aspect"]
+        G["Config"<br>"@ConfigurationProperties"]
     end
 
     A --> B
