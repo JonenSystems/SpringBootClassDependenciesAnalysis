@@ -25,19 +25,19 @@ Spring Securityは以下のような**依存モデル**で構成されていま�
 
 ```mermaid
 graph TD
-    subgraph 認証(Authentication)
+    subgraph auth ["認証(Authentication)"]
         A[AuthenticationManager]
         B[AuthenticationProvider]
         C[UserDetailsService]
         D[PasswordEncoder]
     end
 
-    subgraph 認可(Authorization)
+    subgraph authz ["認可(Authorization)"]
         E[AccessDecisionManager]
         F[Role/Authority]
     end
 
-    subgraph フィルタ処理
+    subgraph filter ["フィルタ処理"]
         G[SecurityFilterChain]
         H[UsernamePasswordAuthenticationFilter]
         I[JwtAuthenticationFilter]
