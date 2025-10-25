@@ -58,13 +58,18 @@ graph TD
 @Service"]
     end
     subgraph Repository層
-        C["Repository"<br>"@Repository"]
-        D["Entity"<br>"@Entity"]
+        C["Repository
+@Repository"]
+        D["Entity
+@Entity"]
     end
     subgraph CrossCutting
-        E["Security"<br>"@PreAuthorize / @Bean"]
-        F["AOP"<br>"@Transactional / @Aspect"]
-        G["Config"<br>"@ConfigurationProperties"]
+        E["Security
+@PreAuthorize / @Bean"]
+        F["AOP
+@Transactional / @Aspect"]
+        G["Config
+@ConfigurationProperties"]
     end
 
     A --> B
