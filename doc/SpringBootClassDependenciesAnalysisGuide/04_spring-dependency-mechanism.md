@@ -93,7 +93,8 @@ public void orderProcess() {
 
 ```mermaid
 graph LR
-    Client --> ProxyClass[Proxy Service<br>(@Transactional)]
+    Client --> ProxyClass["Proxy Service"
+"(@Transactional)"]
     ProxyClass --> RealService
     ProxyClass --> TransactionManager
 ```
