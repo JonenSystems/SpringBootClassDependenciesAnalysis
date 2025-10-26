@@ -1,1 +1,3 @@
 # SpringBootClassDependenciesAnalysis
+
+https://jonensystems.github.io/SpringBootClassDependenciesAnalysis/doc/RequirementsSpecification/dependencie-sanalysis.htm
