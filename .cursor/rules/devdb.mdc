@@ -1,0 +1,89 @@
+---
+alwaysApply: true
+---
+以下の通り、JPAとH2インメモリデータベースによるデータアクセスを実装する
+
+# 技術仕様
+- データベース：H2（インメモリ）を使用する。
+- JPA設定：ddl-auto=none、defer-datasource-initialization=trueとする。
+- ORマッパー：Hibernateを使用する。
+- 依存関係
+  - spring-boot-starter-data-jpa
+  - h2（runtime scope）
+
+---
+
+# 実装手順
+- STEP1: 依存関係を追加（pom.xml）
+- STEP2: プロパティ設定（application.properties）
+- STEP3: データベース初期化
+- STEP4: SQLファイル作成
+- STEP5: データ作成
+---
+
+# 設定ファイル（`application.properties`）
+
+- データベース設定
+  - spring.datasource.url=jdbc:h2:mem:testdb
+  - spring.datasource.driverClassName=org.h2.Driver
+  - spring.datasource.username=sa
+  - spring.datasource.password=
+
+- H2コンソール設定
+  - spring.h2.console.enabled=true
+  - spring.h2.console.path=/h2-console
+
+- JPA設定
+  - spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+  - spring.jpa.hibernate.ddl-auto=create-drop
+  - spring.jpa.show-sql=true
+  - spring.jpa.properties.hibernate.format_sql=true
+
+- プロファイル設定（JPA実装を有効化）
+  - spring.profiles.active=jpa
+
+- H2 Database Initialization
+  - spring.sql.init.encoding=UTF-8
+  - spring.sql.init.mode=always
+  - spring.sql.init.data-locations=classpath:data.sql
+  - spring.jpa.defer-datasource-initialization=true
+
+---
+
+# データベース初期化仕様
+
+## 基本原則
+- schema.sql: テーブル構造の定義
+- data.sql**: 初期データの投入
+- H2の特性を考慮した初期化処理を行う事
+
+## H2データベースの特性
+### AUTO_INCREMENTの動作
+- H2のAUTO_INCREMENTはテーブル削除ではリセットされない
+- 外部キー制約がある場合、TRUNCATE TABLEの実行順序に注意が必要
+- テスト実行時の重複データ挿入を防ぐ必要がある
+
+### 外部キー制約の管理
+- 子テーブルから親テーブルへの参照がある場合、削除順序が重要
+- `SET REFERENTIAL_INTEGRITY FALSE` で一時的に制約を無効化可能
+
+## 推奨される初期化方法
+### data.sql（初期データ）
+-- 外部キー制約を一時無効化(SET REFERENTIAL_INTEGRITY FALSE;)
+-- 全テーブルのデータを削除(AUTO_INCREMENTもリセット)
+-- 外部キー制約を再有効化(SET REFERENTIAL_INTEGRITY TRUE;)
+-- 初期データ投入
+
+## 非推奨の初期化方法
+-- ❌ 非推奨：DELETE FROM（AUTO_INCREMENTがリセットされない）
+-- ❌ 非推奨：IDを指定しないINSERT（外部キー参照が失敗する可能性）
+
+---
+
+# テスト実行時の注意点
+1. **重複データの防止**: TRUNCATE TABLEでAUTO_INCREMENTをリセット
+2. **外部キー制約の順序**: 子テーブルから親テーブルの順で削除
+3. **IDの明示指定**: 外部キー参照を確実にするためIDを明示
+4. **制約の一時無効化**: 削除処理中の制約違反を防ぐ
+
+---

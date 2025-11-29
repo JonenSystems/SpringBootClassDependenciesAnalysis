@@ -1,0 +1,249 @@
+---
+alwaysApply: false
+---
+# 画面仕様
+
+画面の実装は以下を満足すること。
+
+## 画面共通仕様
+- 特別な指示がない限り、共通CSSファイル（`/static/css/style.css`）を用いる。
+- **共通レイアウト**：ヘッダー・フッターは共通部品化されており、ユーザー機能画面は`user-layout.html`、管理者機能画面は`admin-layout.html`を使用する。
+- ルートパス（/）アクセス時は商品一覧にリダイレクトする。
+- **JavaScriptは外部ファイル化**：インラインスクリプトは使用せず、すべて外部JavaScriptファイル（`/static/js/`）に配置する。
+- 外部ファイル(CSS,JavaScript,画像ファイル)についてはCache Bustingにより、ユーザー側でキャッシュクリアしなくても更新内容が反映されること。
+
+# 画面ファイル構成
+
+## 全体構成
+
+以下の通り、ディレクトリを作成し、ファイルを配置すること
+```
+src/
+├── main/
+│   ├── java/
+│   │   └── com/example/shopping/
+│   │       └── config/                           # 画面関連設定
+│   │           ├── SecurityConfig.java          # セキュリティ設定（認証・認可）
+│   │           ├── WebConfig.java               # Web設定（リソースハンドラー等）
+│   │           └── FileUploadConfig.java        # ファイルアップロード設定
+│   └── resources/
+│       ├── static/                              # 静的リソース
+│       │   ├── css/
+│       │   │   └── style.css                    # 共通CSSファイル
+│       │   ├── js/
+│       │   │   ├── user/
+│       │   │   └── admin/
+│       │   ├── images/                          # 画像ファイル
+│       │   │   ├── project-images/              # projectセクション関連画像ディレクトリ
+│       │   │   ├── icons/                       # icon画像ディレクトリ
+│       │   │   └── logos/                       # logo画像ディレクトリ
+│       │   └── index.html                       # 静的ホームページ
+│       ├── templates/                           # Thymeleafテンプレート
+│       │   ├── user-layout.html                 # ユーザー画面用共通レイアウト
+│       │   ├── admin-layout.html                # 管理者画面用共通レイアウト
+│       │   ├── user/                            # ユーザー画面用テンプレートを格納する
+│       │   └── admin/                           # 管理者画面用テンプレートを格納する
+```
+
+### 設定クラス
+|No.|設定名|ファイル名|設定項目|
+|---|---|---|---|
+|1|セキュリティ設定|SecurityConfig.java|認証・認可設定<br>- 管理者画面の認証要求<br>- ログイン・ログアウト設定<br>- CSRF保護設定<br>- セッション管理設定|
+|2|Web設定|WebConfig.java|リソースハンドラー設定<br>- 静的リソース（CSS、JS、画像）のマッピング<br>- ファイルアップロードパス設定<br>- エラーページ設定|
+|3|ファイルアップロード設定|FileUploadConfig.java|ファイルアップロード設定<br>- 最大ファイルサイズ（10MB）<br>- 対応ファイル形式（JPG、PNG、GIF、WebP）<br>- アップロードディレクトリ設定|
+
+### 共通レイアウト（templates/）
+
+|No.|レイアウト名|ファイル名|用途|機能|
+|---|---|---|---|---|
+|1|ユーザー画面用共通レイアウト|user-layout.html|ユーザー画面全般|ヘッダー（サイト名、ナビゲーション、カートアイテム数）<br>フッター（コピーライト）<br>head要素（メタタグ、CSS、タイトル）|
+|2|管理者画面用共通レイアウト|admin-layout.html|管理者画面全般|ヘッダー（管理者画面タイトル、ナビゲーション、ログアウト）<br>フッター（コピーライト）<br>head要素（メタタグ、CSS、タイトル）|
+
+### ユーザー画面（templates/user/）
+- 共通部品（ユーザー画面用共通レイアウト）を使用すること
+
+### 管理者画面（templates/admin/）
+- 共通部品（管理者画面用共通レイアウト）を使用すること
+
+---
+
+# Thymeleafテンプレート実装仕様
+
+## 基本原則
+- **Formクラス経由でデータを参照する**
+- **動的要素には必ずSelenium操作用のid属性を付与する**
+- **インラインスクリプトは使用禁止**：すべてのJavaScriptは外部ファイルに配置する
+- 外部ファイル(CSS,JavaScript,画像ファイル)についてはCache Bustingにより、ユーザー側でキャッシュクリアしなくても更新内容が反映されること。
+
+## Selenium操作用id属性の実装
+
+### 必須id属性
+以下の要素には必ずid属性を付与する：
+
+```html
+<!-- フォーム要素 -->
+<input type="text" id="name" th:field="*{name}" class="form-control" required>
+<input type="email" id="email" th:field="*{email}" class="form-control" required>
+<input type="tel" id="phone" th:field="*{phone}" class="form-control">
+<textarea id="address" th:field="*{address}" class="form-control" rows="3"></textarea>
+
+<!-- 検索・フィルター要素 -->
+<input type="text" id="searchName" name="searchName" th:value="${searchName}" class="form-control">
+<select id="searchCategory" name="searchCategory" class="form-control">
+<input type="email" id="searchEmail" name="searchEmail" th:value="${searchEmail}" class="form-control">
+
+<!-- ボタン・リンク要素 -->
+<button type="submit" id="login-btn" class="login-btn">ログイン</button>
+<a id="edit-product" th:href="@{/admin/products/{id}/edit(id=${product.id})}" class="btn btn-primary btn-sm">編集</a>
+<a id="delete-product" th:href="@{/admin/products/{id}/delete(id=${product.id})}" class="btn btn-danger btn-sm">削除</a>
+
+<!-- 動的コンテンツ要素 -->
+<div id="toast" class="toast"></div>
+<div id="product-grid" class="product-grid">
+```
+
+## 画像表示の実装
+
+### 登録画像の表示
+```html
+<!-- 画像がある場合 -->
+<div th:if="${product.imagePath != null and !product.imagePath.empty and product.imagePath != ''}">
+    <img th:src="${product.imagePath}" 
+         th:alt="${product.name}" 
+         class="product-image"
+         data-has-image="true">
+    <div class="product-image no-image-placeholder hidden">
+        No Image
+    </div>
+</div>
+
+<!-- 画像がない場合 -->
+<div th:unless="${product.imagePath != null and !product.imagePath.empty and product.imagePath != ''}" 
+     class="product-image no-image-placeholder">
+    No Image
+</div>
+```
+
+## エラーハンドリング
+
+### バリデーションエラー表示
+```html
+<!-- フォームエラー表示 -->
+<div class="form-group">
+    <label for="name">お名前 <span class="text-danger">*</span></label>
+    <input type="text" id="name" th:field="*{name}" class="form-control" 
+           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''" required>
+    <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}"></div>
+</div>
+```
+
+### アラート表示
+```html
+<!-- 成功メッセージ -->
+<div th:if="${param.logout}" class="alert alert-success">
+    ログアウトしました。
+</div>
+
+<!-- エラーメッセージ -->
+<div th:if="${param.error}" class="alert alert-danger">
+    ユーザー名またはパスワードが正しくありません。
+</div>
+
+<!-- 警告メッセージ -->
+<div th:if="${!productListForm.hasProducts()}" class="alert alert-warning">
+    <p>商品が見つかりませんでした。</p>
+</div>
+```
+
+## レスポンシブ対応
+以下画面幅に大して、ブレークポイントを設定する
+- default : 1280px
+- tablet : 768px
+- mobile : 540px
+
+## アクセシビリティ対応
+
+### セマンティックHTML
+```html
+<!-- ヘッダー -->
+<header class="header">
+    <div class="container">
+        <a href="/" class="site-title">オンラインショップ</a>
+        <nav class="nav-links">
+            <a href="/">商品一覧</a>
+            <a href="/cart">カート <span th:if="${cartItemCount > 0}" th:text="'(' + ${cartItemCount} + ')'">(0)</span></a>
+        </nav>
+    </div>
+</header>
+
+<!-- メインコンテンツ -->
+<main class="main-content">
+    <div class="container">
+        <!-- コンテンツ -->
+    </div>
+</main>
+
+<!-- フッター -->
+<footer class="footer">
+    <div class="container">
+        <p>&copy; 2024 オンラインショップ. All rights reserved.</p>
+    </div>
+</footer>
+```
+
+
+---
+
+## JavaScript実装仕様
+
+### 基本原則
+- **インラインスクリプト禁止**：`onclick`、`onerror`、`onload`などのインライン属性は使用しない
+- **外部ファイル化必須**：すべてのJavaScriptは`/static/js/`ディレクトリに配置
+- **機能別ファイル分割**：画面ごとに専用のJavaScriptファイルを作成
+- **イベントリスナー使用**：DOMContentLoadedイベントで初期化処理を実行
+
+### セキュリティ考慮事項
+
+#### CSP対応
+- **インラインスクリプト禁止**：CSPエラーを防ぐため、すべてのJavaScriptを外部ファイルに配置
+- **XSS対策**：外部ファイル化によりインラインスクリプト攻撃を防止
+- **ファイル配置**：適切なディレクトリ構造で管理
+
+### パフォーマンス最適化
+
+#### ファイル分割
+- **機能別分割**：画面ごとに専用ファイルを作成
+- **共通機能**：共通のユーティリティ関数は別ファイルに分離可能
+- **遅延読み込み**：必要に応じて動的読み込みを検討
+
+#### キャッシュ対策
+```html
+<!-- キャッシュバスティング -->
+<script th:src="@{/js/product-list.js(v=${#dates.format(#dates.createNow(), 'yyyyMMddHHmmss')})}"></script>
+```
+
+### テスト対応
+
+#### Seleniumテスト対応
+```javascript
+// テスト用のid属性を活用
+document.addEventListener('DOMContentLoaded', function() {
+    // テスト用の要素を特定しやすいようにid属性を使用
+    const deleteButton = document.getElementById('delete-product-1');
+    if (deleteButton) {
+        deleteButton.addEventListener('click', function(e) {
+            if (!confirmAction('この商品を削除しますか？')) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+```
+
+#### デバッグ対応
+```javascript
+// 開発環境でのデバッグ
+if (typeof console !== 'undefined' && console.log) {
+    console.log('JavaScript初期化完了');
+}
+```

@@ -1,0 +1,270 @@
+---
+alwaysApply: false
+---
+## 1. セッション管理の基本原則
+- セッション管理は共通部品（common/）として実装し、責任を分離する。
+
+- Controller層はセッション管理のロジックを実装せず、共通部品のセッション管理クラスを呼び出すだけとする。
+
+- 共通部品クラスには以下3種類のクラスを必ず作成する。
+    - プレゼンテーション層が呼び出しに使用するインターフェースクラス(機能毎に作成)
+    - 上記インターフェースの実装クラスでセッション管理(機能毎に作成)
+    - HttpSession に格納されたセッションデータの取得・初期化・更新・削除を一元化する共通ユーティリティクラス(SessionUtils.java)。
+        なお、上記ユーティリティクラスは以下、役割をもつものとする
+        - セッションオブジェクトの取得:セッションからオブジェクトを安全に取得し、存在しなければ初期化して返す
+        - セッションへの保存:任意のオブジェクトを特定のキーで保存
+        - セッションの削除:操作完了後やキャンセル時にセッションデータを破棄
+        - キー名の定義を一元化:"CART_SESSION" や "ORDER_STATE" のようなキーをハードコーディングせず管理
+
+- ビジネスロジック層（Service）はセッション非依存とする。
+
+- **セッション管理方式**: HttpSessionを直接受け取る方式のみを使用する（セキュリティ強化のため）。
+
+- 以下、ベストプラクティスに沿った設計を行う。
+
+## 2. セッション管理の責務分担
+
+### 共通部品（common/）の責務
+- **セッション管理ロジックの実装**: セッションの取得・保存・削除・更新の全ロジック
+- **セッション状態の管理**: セッションデータの整合性管理
+- **セッション操作の抽象化**: Controller層が簡単に呼び出せるインターフェース提供
+
+### プレゼンテーション層（Controller）の責務
+- **セッション管理クラスの呼び出し**: 共通部品のセッション管理メソッドを呼び出すのみ
+- **セッション管理ロジックの実装禁止**: セッション操作の詳細ロジックは一切実装しない
+- **データの受け渡し**: FormクラスとDTOクラス間のデータ変換のみ
+
+### ビジネスロジック層（Service）の責務
+- **セッション非依存**: セッション状態に依存しないビジネスロジックの実装
+- **データ処理**: DTOクラスとEntityクラス間のデータ変換
+
+## 3. セッション管理の禁止事項
+
+### プレゼンテーション層（Controller）での禁止事項
+- **HttpSessionの直接操作を禁止**
+　- プレゼンテーション層はセッションデータの受け渡しのみで、データの操作は共通部品として作成した専用クラスにて行う。
+  - `session.getAttribute()`, `session.setAttribute()`, `session.removeAttribute()`の直接使用
+  - セッション操作は必ず共通部品インターフェース経由で行う
+
+- **セッション管理ロジックの実装を禁止**
+  - Controller層でセッションの取得・保存・削除ロジックを実装しない
+  - セッション関連のビジネスロジックをController層に記述しない
+  - セッション状態の判定ロジックをController層に実装しない
+
+- **RequestContextHolderの使用を禁止**
+  - RequestContextHolderを使用したセッション取得を禁止
+  - セッション取得は必ずControllerメソッドの引数としてHttpSessionを受け取る
+
+### ビジネスロジック層（Service）での禁止事項
+- **セッション依存の実装を禁止**
+  - Service層でHttpSessionやセッション関連クラスに依存しない
+  - セッション状態に依存するビジネスロジックを実装しない
+  - セッション操作をService層で行わない
+
+### セキュリティ上の禁止事項
+- **セッションIDのURL露出を禁止**
+  - セッションIDがURLに含まれる実装を避ける
+  - Cookieベースのセッション管理を優先する
+
+---
+
+## 4. セッション管理のベストプラクティス
+1. **責任分離**: セッション管理を専用の共通部品クラスに分離
+2. **タイムアウト管理**: 適切なセッション有効期限の設定
+3. **null チェック**: セッションが存在しない場合の適切な処理
+4. **型安全性**: 適切な型でセッション属性を管理
+5. **スコープ管理**: 必要最小限のデータのみをセッションに保存
+6. **クリーンアップ**: 不要になったセッション属性の削除
+7. **ログ出力**: デバッグ情報の記録
+8. **安全な操作**: nullチェックと例外処理
+9. **セキュリティ強化**: Cookieベースのセッション管理とセキュリティヘッダーの設定
+10. **セッション作成の保証**: `getSession(true)`でセッションの確実な作成
+11. **HttpSession直接受け取り**: セッション取得は必ずControllerメソッドの引数として行う
+
+---
+
+## 5. セッション管理仕様
+
+|項目|内容|
+| ---- | ---- |
+|管理対象|機能要件の指示による|
+|セッション保持方式|Spring MVCの`HttpSession`を使用（サーバーセッション）|
+|セッションの有効期限|30分（`server.servlet.session.timeout=30m`で設定）|
+|管理クラス|SessionCart, SessionCustomer, SessionOrderなど、機能別に共通部品クラスとして定義|
+|共通処理化|共通部品`SessionUtils`にてセッションの取得・保存・削除を一元管理|
+|セッション管理方式|HttpSession直接受け取り方式のみ（セキュリティ強化のため）|
+|セキュリティ設定|Cookieベースのセッション管理、http-only、same-site設定|
+
+---
+
+## 6. インターフェース設計
+各セッション管理インターフェースは以下の方式のみをサポートする：
+- **HttpSession直接受け取り方式**: `getCartItems(session)`, `addToCart(item, session)`など
+
+---
+
+## 7. 実装手順（ステップバイステップ）
+
+### ステップ1: セッション用DTOの定義
+- セッションに保存するデータのDTOクラスを作成
+- 例: `CartItemDto`, `CustomerDto`, `OrderDto`など
+- セッションに保存する必要最小限の情報のみを含める
+
+### ステップ2: 共通ユーティリティクラスおよびインターフェイスの作成
+- `SessionUtils.java`: セッション操作の共通処理を実装
+- セッション管理インターフェース: 機能別に作成（`SessionCart`, `SessionCustomer`など）
+- セッション管理実装クラス: インターフェースの実装（`SessionCartImpl`, `SessionCustomerImpl`など）
+
+### ステップ3: コントローラからセッションにアクセスする処理を追加
+- Controllerメソッドに`HttpSession session`パラメータを追加
+- 共通部品のメソッド呼び出し時にsessionを渡す
+- セッション操作は必ず共通部品経由で行う（ロジックは実装しない）
+
+### ステップ4: 必要に応じてテンプレートに反映
+- セッション情報を表示するテンプレートの更新
+- セッション状態に応じた表示制御の実装
+
+### ステップ5: セキュリティ設定の適用
+- `application.properties`にセッション管理設定を追加
+- Cookieベースのセッション管理設定
+- セキュリティヘッダーの設定
+
+### ステップ6: テストクラスでのMockBean設定
+- セッション管理共通部品のMockBeanを設定
+- テスト用のセッション情報を適切に設定
+
+### セキュリティ設定の詳細
+application.propertiesに以下の設定を追加：
+```properties
+# セッション設定
+server.servlet.session.timeout=30m
+server.servlet.session.tracking-modes=cookie
+server.servlet.session.cookie.http-only=true
+server.servlet.session.cookie.secure=false
+server.servlet.session.cookie.same-site=strict
+```
+
+---
+
+## 8. 補足・運用上の注意
+
+* セッションの肥大化に注意し、保持データは最小限に。
+* 状態遷移が複雑になる場合はステートマシン的な扱いを検討。
+* セッションIDのURL露出を避け、Cookieベースのセッション管理を優先する。
+* HttpSession直接受け取り方式により、セキュリティが向上し、コードの意図が明確になる。
+* テスト時はセッション管理共通部品のMockBeanを適切に設定する。
+* Controllerメソッドでは必ずHttpSessionを引数として受け取り、共通部品に渡す。
+* セッションタイムアウト時の適切な処理を実装する。
+* **重要**: Controller層にはセッション管理ロジックを一切実装せず、共通部品の呼び出しのみとする。
+
+---
+
+## 9. セキュリティ要件
+
+### 基本セキュリティ要件
+- セッションIDのURL露出を防止
+- Cookieベースのセッション管理を優先
+- http-only、same-site設定によるセキュリティ強化
+
+### セッション管理方式
+**HttpSession直接受け取り方式**: セキュリティ面で安全で推奨される唯一の方式
+
+### ログイン機能実装時の追加要件
+ログイン機能実装時には以下の追加要件を検討する：
+
+#### 認証・認可関連
+- **ユーザーセッション管理**: ログイン状態の管理用セッション管理クラス（`SessionUser`）の作成
+- **セッション固定攻撃対策**: ログイン成功時のセッションID再生成
+- **権限情報の管理**: ユーザーロールや権限情報のセッション管理
+- **ログアウト処理**: セッション情報の完全削除
+
+#### セキュリティ強化
+- **セッションタイムアウト**: 自動ログアウト機能の実装
+- **同時ログイン制御**: 同一ユーザーの複数セッション管理
+- **セッション監査**: セッション操作のログ記録
+- **CSRF対策**: セッションベースのCSRFトークン管理
+
+#### 実装例
+```java
+// ユーザーセッション管理インターフェース
+public interface SessionUser {
+    UserDto getUser(HttpSession session);
+    void setUser(UserDto user, HttpSession session);
+    void clearUser(HttpSession session);
+    boolean isLoggedIn(HttpSession session);
+    void regenerateSession(HttpSession session); // セッション固定攻撃対策
+}
+```
+
+---
+
+## 10. エラーハンドリング
+
+|エラー種別|処理内容|
+| ---------- | ----------------------------------------------------------- |
+|セッション取得失敗|デフォルト値で初期化|
+|セッション保存失敗|エラーログ出力後、例外をスロー|
+|セッションID露出|Cookieベースのセッション管理に切り替え|
+|HttpSession引数未指定|コンパイルエラーとして検出されるため、実装時に修正|
+|セッションタイムアウト|適切なエラーページ表示とログイン画面へのリダイレクト|
+|セッション破損|セッション情報の再初期化とエラーログ出力|
+
+---
+
+## 11. 実装例
+
+### Controller層の実装例（ロジックなし）
+```java
+@Controller
+public class CartController {
+    
+    @Autowired
+    private SessionCart sessionCart; // 共通部品のインターフェース
+    
+    @PostMapping("/cart/add")
+    public String addToCart(@ModelAttribute CartItemForm form, 
+                           HttpSession session) {
+        // ロジックは実装せず、共通部品の呼び出しのみ
+        CartItemDto item = form.toDto();
+        sessionCart.addToCart(item, session);
+        return "redirect:/cart";
+    }
+    
+    @GetMapping("/cart")
+    public String viewCart(Model model, HttpSession session) {
+        // ロジックは実装せず、共通部品の呼び出しのみ
+        List<CartItemDto> items = sessionCart.getCartItems(session);
+        model.addAttribute("cartItems", items);
+        return "cart/view";
+    }
+}
+```
+
+### 共通部品の実装例（ロジック集約）
+```java
+@Component
+public class SessionCartImpl implements SessionCart {
+    
+    @Autowired
+    private SessionUtils sessionUtils;
+    
+    @Override
+    public void addToCart(CartItemDto item, HttpSession session) {
+        // セッション管理の全ロジックをここに実装
+        List<CartItemDto> currentItems = getCartItems(session);
+        currentItems.add(item);
+        sessionUtils.setAttribute(session, "CART_SESSION", currentItems);
+    }
+    
+    @Override
+    public List<CartItemDto> getCartItems(HttpSession session) {
+        // セッション管理の全ロジックをここに実装
+        return sessionUtils.getAttribute(session, "CART_SESSION", new ArrayList<>());
+    }
+}
+```
+
+
+
+
+
