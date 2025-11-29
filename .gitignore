@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+.cursor/rules/dataflowdiagram.mdc
+.cursor/rules/login.mdc
+.cursor/rules/plan.mdc
+.cursor/rules/processflowchart.mdc
+.cursor/rules/requirement.mdc

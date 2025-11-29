@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>クラス依存関係解析 - 入力</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .error {
+            color: #d32f2f;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .help-text {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>クラス依存関係解析</h1>
+        
+        <div th:if="${error}" class="alert" th:text="${error}"></div>
+        
+        <form th:action="@{/analysis/execute}" method="post" th:object="${analysisForm}">
+            <div class="form-group">
+                <label for="targetProjectPath">解析対象プロジェクトパス</label>
+                <input 
+                    type="text" 
+                    id="targetProjectPath" 
+                    th:field="*{targetProjectPath}" 
+                    placeholder="例: C:\workspace\myproject または /home/user/myproject"
+                />
+                <div th:if="${#fields.hasErrors('targetProjectPath')}" 
+                     th:errors="*{targetProjectPath}" 
+                     class="error"></div>
+                <div class="help-text">解析対象となるSpringBootアプリケーションのルートディレクトリの絶対パスを入力してください</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="targetPackagePattern">解析対象パッケージパターン（オプション）</label>
+                <input 
+                    type="text" 
+                    id="targetPackagePattern" 
+                    th:field="*{targetPackagePattern}" 
+                    placeholder="例: com.example..*"
+                />
+                <div class="help-text">Ant形式でパッケージパターンを指定（未指定の場合は全てのパッケージを対象）</div>
+            </div>
+            
+            <button type="submit">解析実行</button>
+        </form>
+    </div>
+</body>
+</html>
+
