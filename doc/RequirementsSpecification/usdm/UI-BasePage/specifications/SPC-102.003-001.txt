@@ -1,0 +1,48 @@
+specification_id: SPC-102.003-001
+specification_title: クラス名の重複チェック・除去・ソート機能
+spec:
+- [前提] 解析結果が取得済みで、クラス名リストがパッケージごとに整理された状態であること。
+- [入力] 解析結果から取得したクラス名リスト（同一パッケージ内で重複を含む可能性があるクラス名のコレクション）を入力とする。
+- [処理] Javaの`Stream.distinct()`メソッドを使用してクラス名の重複を除去し、`Set<Class>`を使用してエンティティレベルでの重複も防止する。重複除去後、クラス名をアルファベット順にソートして表示用のリストを作成する。クラス数のカウントも重複除去後の数で計算する。`Class`エンティティの`equals`と`hashCode`は`fullQualifiedName`に基づいて実装する。
+- [出力] 重複が除去され、アルファベット順にソートされたクラス名リストを解析結果画面に表示し、パッケージごとのクラス数も重複除去後の数で表示する。
+- [制約] `Class`エンティティの`fullQualifiedName`が正しく設定されていることが前提である。同一パッケージ内での重複のみを対象とし、異なるパッケージ間での同名クラスは別クラスとして扱う。
+
+input_fields:
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+|解析結果クラス名リスト|classList|List<Class>|解析処理で取得されたクラス名のリスト（重複を含む可能性がある）。|
+|パッケージ名|packageName|String|対象となるパッケージの完全修飾名。|
+
+output_fields:
+| 論理名 | 物理名 | 型 | 保存先（テーブル名） | 説明 |
+|---|---|---|---|---|
+|重複除去済みクラス名リスト|distinctClassList|List<Class>|画面表示|重複が除去され、アルファベット順にソートされたクラス名のリスト。|
+|重複除去後のクラス数|distinctClassCount|Integer|画面表示|重複除去後のクラス数（パッケージごとの集計値）。|
+
+data_flow_diagram:
+```mermaid
+flowchart TD
+    analyzer[外部エンティティ 解析オペレータ]
+    classStore[(データストア 解析結果クラス名リスト)]
+    displayStore[(データストア 画面表示)]
+    proc_distinct((プロセス クラス名重複除去・ソート))
+    analyzer -- 表示要求 --> proc_distinct
+    classStore -- クラス名リスト（重複含む） --> proc_distinct
+    proc_distinct -- 重複除去・ソート済みクラス名リスト --> displayStore
+    displayStore -- 解析結果画面表示 --> analyzer
+```
+
+process_flowchart:
+```mermaid
+flowchart TD
+    start([開始])
+    inputClassList[クラス名リストを受信]
+    toSet[Setに変換してエンティティレベル重複除去<br/>equals/hashCodeはfullQualifiedNameベース]
+    distinct[Stream.distinctでクラス名重複除去]
+    sort[アルファベット順にソート]
+    count[クラス数をカウント]
+    output[重複除去・ソート済みリストを出力]
+    finish([終了])
+
+    start --> inputClassList --> toSet --> distinct --> sort --> count --> output --> finish
+```

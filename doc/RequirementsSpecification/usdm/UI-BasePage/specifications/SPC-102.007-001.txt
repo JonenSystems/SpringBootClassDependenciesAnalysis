@@ -1,0 +1,46 @@
+specification_id: SPC-102.007-001
+specification_title: 依存関係の種類別件数リストの表示
+spec:
+- [前提] 解析処理が完了し、各パッケージに含まれる依存関係情報が取得済みであること。
+- [入力] 各パッケージに含まれる依存関係情報（種類別の依存関係レコード）を入力とする。
+- [処理] 各パッケージに含まれる依存関係を種類（型依存、メソッド依存、フィールド依存など）ごとに集計し、パッケージごとに整理する。
+- [出力] 解析結果画面に、パッケージごとに整理された状態で各パッケージの依存関係の種類別件数を表示する。
+- [制約] 依存関係の種類は定義されたカテゴリに基づいて分類する。依存関係が存在しない種類は0件として表示する。
+
+input_fields:
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+|パッケージ別依存関係リスト|packageDependencyList|Map<String, List<Dependency>>|パッケージ名をキーとした、各パッケージに含まれる依存関係のリスト。|
+
+output_fields:
+| 論理名 | 物理名 | 型 | 保存先（テーブル名） | 説明 |
+|---|---|---|---|---|
+|パッケージ別依存関係種類別件数|packageDependencyCountByType|Map<String, Map<String, Integer>>|画面表示|パッケージ名をキーとし、依存関係の種類をキーとした件数のマップ。|
+
+data_flow_diagram:
+```mermaid
+flowchart TD
+    analyzer[外部エンティティ 解析オペレータ]
+    analysisResult[データストア 解析結果]
+    displayStore[(データストア 画面表示)]
+    proc_aggregate((プロセス 依存関係種類別集計・表示))
+    analyzer -- 画面表示要求 --> proc_aggregate
+    analysisResult -- パッケージ別依存関係リスト --> proc_aggregate
+    proc_aggregate -- パッケージ別依存関係種類別件数 --> displayStore
+    displayStore -- 解析結果画面表示 --> analyzer
+```
+
+process_flowchart:
+```mermaid
+flowchart TD
+    start([開始])
+    receiveDependencyList[パッケージ別依存関係リスト受信]
+    groupByType[依存関係を種類別にグループ化]
+    countByType[種類別に件数をカウント]
+    formatCount[表示形式に整形]
+    display[解析結果画面に表示]
+    finish([終了])
+
+    start --> receiveDependencyList --> groupByType --> countByType --> formatCount --> display --> finish
+```
+

@@ -1,0 +1,13 @@
+request_id: REQ-102.004
+level: lower
+title: パッケージ名の表示
+demand:
+  ①何が（何を）: 各パッケージのパッケージ名を
+  ②どんな状態／条件で: パッケージごとに整理された状態で
+  ③どうする: 解析結果画面に表示する
+  文: 各パッケージのパッケージ名をパッケージごとに整理された状態で解析結果画面に表示する
+reason:
+  - 取得されたパッケージ名よりから解析処理が正しく実施されたことを解析者が確認できるようにする
+description:
+  - 例: 「com.example.controller」「com.example.service」「com.example.repository」のように表示される
+

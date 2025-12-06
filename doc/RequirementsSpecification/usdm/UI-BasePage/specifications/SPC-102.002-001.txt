@@ -1,0 +1,45 @@
+specification_id: SPC-102.002-001
+specification_title: 解析結果の表示
+spec:
+- [前提] 解析処理が完了し、解析結果が取得済みであること。
+- [入力] 解析処理で取得された解析結果（パッケージ、クラス、依存関係の情報）を入力とする。
+- [処理] 解析結果をパッケージ単位でグループ化し、パッケージごとに分割して整理する。各パッケージの情報を独立したセクションとして画面に配置する。
+- [出力] 解析結果画面に、パッケージごとに分割された解析結果を表示する。
+- [制約] パッケージが存在しない場合は空のリストとして表示する。パッケージごとの表示順序は任意とする。
+
+input_fields:
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+|解析結果|analysisResult|AnalysisResult|解析処理で取得されたパッケージ、クラス、依存関係の情報を含む解析結果オブジェクト。|
+
+output_fields:
+| 論理名 | 物理名 | 型 | 保存先（テーブル名） | 説明 |
+|---|---|---|---|---|
+|パッケージ別解析結果|packageGroupedResult|Map<String, PackageResult>|画面表示|パッケージ名をキーとした、パッケージごとにグループ化された解析結果。|
+
+data_flow_diagram:
+```mermaid
+flowchart TD
+    analyzer[外部エンティティ 解析オペレータ]
+    analysisService[データストア 解析サービス]
+    displayStore[(データストア 画面表示)]
+    proc_group((プロセス パッケージ別グループ化・表示))
+    analyzer -- 画面表示要求 --> proc_group
+    analysisService -- 解析結果 --> proc_group
+    proc_group -- パッケージ別解析結果 --> displayStore
+    displayStore -- 解析結果画面表示 --> analyzer
+```
+
+process_flowchart:
+```mermaid
+flowchart TD
+    start([開始])
+    receiveResult[解析結果受信]
+    groupByPackage[パッケージ単位でグループ化]
+    sortPackages[パッケージを整理]
+    display[パッケージごとに画面表示]
+    finish([終了])
+
+    start --> receiveResult --> groupByPackage --> sortPackages --> display --> finish
+```
+

@@ -1,0 +1,45 @@
+specification_id: SPC-102.005-001
+specification_title: クラス数の表示
+spec:
+- [前提] 解析処理が完了し、各パッケージに含まれるクラス情報が取得済みであること。クラス名の重複チェック・除去処理が完了していること。
+- [入力] 各パッケージに含まれるクラス情報（重複除去後のクラスリスト）を入力とする。
+- [処理] 各パッケージに含まれるクラス数をカウントし、パッケージごとに整理された状態で数値を算出する。
+- [出力] 解析結果画面に、パッケージごとに整理された状態で各パッケージのクラス数を表示する。
+- [制約] クラス数は重複除去後のユニークなクラス名の数でカウントする。クラスが存在しないパッケージは0件として表示する。
+
+input_fields:
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+|パッケージ別クラスリスト|packageClassList|Map<String, List<Class>>|パッケージ名をキーとした、重複除去済みのクラスリスト。|
+
+output_fields:
+| 論理名 | 物理名 | 型 | 保存先（テーブル名） | 説明 |
+|---|---|---|---|---|
+|パッケージ別クラス数|packageClassCount|Map<String, Integer>|画面表示|パッケージ名をキーとした、各パッケージのクラス数。|
+
+data_flow_diagram:
+```mermaid
+flowchart TD
+    analyzer[外部エンティティ 解析オペレータ]
+    analysisResult[データストア 解析結果]
+    displayStore[(データストア 画面表示)]
+    proc_count((プロセス クラス数カウント・表示))
+    analyzer -- 画面表示要求 --> proc_count
+    analysisResult -- パッケージ別クラスリスト --> proc_count
+    proc_count -- パッケージ別クラス数 --> displayStore
+    displayStore -- 解析結果画面表示 --> analyzer
+```
+
+process_flowchart:
+```mermaid
+flowchart TD
+    start([開始])
+    receiveClassList[パッケージ別クラスリスト受信]
+    countClasses[各パッケージのクラス数をカウント]
+    formatCount[表示形式に整形]
+    display[解析結果画面に表示]
+    finish([終了])
+
+    start --> receiveClassList --> countClasses --> formatCount --> display --> finish
+```
+

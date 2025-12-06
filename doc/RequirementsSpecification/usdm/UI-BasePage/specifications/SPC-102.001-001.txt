@@ -1,0 +1,44 @@
+specification_id: SPC-102.001-001
+specification_title: 対象プロジェクトパスの表示
+spec:
+- [前提] 解析処理が完了し、解析結果画面（URI:/analysis/result）が表示される状態であること。
+- [入力] 解析処理で使用されたプロジェクトのルートディレクトリのフルパスを入力とする。
+- [処理] 解析結果画面の表示エリアに、解析対象となったプロジェクトのパス情報を文字列として表示する。
+- [出力] 解析結果画面に「対象プロジェクト: [パス]」のような形式でプロジェクトパスを表示する。
+- [制約] パス情報は必ず表示され、空欄やnullは許容しない。表示形式は固定とする。
+
+input_fields:
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+|対象プロジェクトパス|targetProjectPath|String|解析処理が実行されたプロジェクトのルートディレクトリのフルパス。|
+
+output_fields:
+| 論理名 | 物理名 | 型 | 保存先（テーブル名） | 説明 |
+|---|---|---|---|---|
+|表示用プロジェクトパス|displayProjectPath|String|画面表示|解析結果画面に表示されるプロジェクトパス情報。|
+
+data_flow_diagram:
+```mermaid
+flowchart TD
+    analyzer[外部エンティティ 解析オペレータ]
+    analysisService[データストア 解析サービス]
+    displayStore[(データストア 画面表示)]
+    proc_display((プロセス 対象プロジェクトパス表示))
+    analyzer -- 画面表示要求 --> proc_display
+    analysisService -- 対象プロジェクトパス --> proc_display
+    proc_display -- 表示用プロジェクトパス --> displayStore
+    displayStore -- 解析結果画面表示 --> analyzer
+```
+
+process_flowchart:
+```mermaid
+flowchart TD
+    start([開始])
+    receivePath[対象プロジェクトパス受信]
+    formatPath[表示形式に整形]
+    display[解析結果画面に表示]
+    finish([終了])
+
+    start --> receivePath --> formatPath --> display --> finish
+```
+

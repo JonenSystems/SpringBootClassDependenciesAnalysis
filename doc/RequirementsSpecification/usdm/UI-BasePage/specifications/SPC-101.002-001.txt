@@ -1,0 +1,52 @@
+specification_id: SPC-101.002-001
+specification_title: 解析実行ボタンの提供
+spec:
+- [前提] 解析対象プロジェクト入力画面（URI:/analysis）が表示されていること。
+- [入力] 解析者が解析実行ボタンをクリックしたイベントを入力とする。
+- [処理] HTMLのinput type="submit"要素を表示し、クリックイベントを受付ける。ボタンクリック時に、入力されたルートパスをリクエストパラメータとして送信し、解析処理を開始する。
+- [出力] 解析実行ボタンのクリックにより、解析処理が開始され、URI:/analysis/resultにリダイレクトされる。
+- [制約] ルートパスが入力されていない場合、または無効なパスの場合はボタンを無効化するか、エラーメッセージを表示する。
+
+input_fields:
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+|解析実行ボタンクリックイベント|submitEvent|Event|解析者が解析実行ボタンをクリックした際のイベント。|
+|入力されたルートパス|projectPath|String|テキスト入力フィールドから取得したルートパス。|
+
+output_fields:
+| 論理名 | 物理名 | 型 | 保存先（テーブル名） | 説明 |
+|---|---|---|---|---|
+|解析処理リクエスト|analysisRequest|Request|HTTPリクエスト|解析処理開始のリクエスト。URI:/analysis/resultにリダイレクトされる。|
+
+data_flow_diagram:
+```mermaid
+flowchart TD
+    analyzer[外部エンティティ 解析オペレータ]
+    inputForm[データストア 入力フォーム]
+    analysisService[データストア 解析サービス]
+    proc_button((プロセス 解析実行ボタン表示・クリック処理))
+    analyzer -- ボタンクリック --> proc_button
+    inputForm -- ルートパス --> proc_button
+    proc_button -- 解析処理リクエスト --> analysisService
+    analysisService -- 解析結果画面リダイレクト --> analyzer
+```
+
+process_flowchart:
+```mermaid
+flowchart TD
+    start([開始])
+    displayButton[解析実行ボタン表示]
+    waitClick[クリック待ち]
+    receiveClick[ボタンクリック受信]
+    validatePath[ルートパスバリデーション]
+    isValid{有効なパスか?}
+    createRequest[解析処理リクエスト作成]
+    redirect[URI:/analysis/resultにリダイレクト]
+    showError[エラーメッセージ表示]
+    finish([終了])
+
+    start --> displayButton --> waitClick --> receiveClick --> validatePath --> isValid
+    isValid -- はい --> createRequest --> redirect --> finish
+    isValid -- いいえ --> showError --> waitClick
+```
+

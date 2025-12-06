@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>解析機能要求一覧</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP","Hiragino Kaku Gothic ProN","Meiryo",sans-serif;margin-left: 300px;line-height:1.6;}
+h2,h3{margin:1.2em 0 0.4em; text-align:center;}
+
+table{border-collapse:collapse;margin:1em 0;width:100%;table-layout:auto;}
+th,td{border:1px solid #000;padding:8px;vertical-align:top;}
+
+.note{color:#666;font-size:0.9em}
+.upper_request{background:#FFF2CC;}
+.lower_request{background:#D9E1F2;}
+</style>
+
+<style>
+.sidebar-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  padding: 24px 20px;
+  box-sizing: border-box;
+  background-color: #f5f7fb;
+  border-right: 1px solid #d4d9e2;
+  overflow-y: auto;
+  font-family: inherit;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.sidebar-nav a {
+  color: #1d3b70;
+  text-decoration: none;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a:focus {
+  text-decoration: underline;
+}
+
+.nav-upper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-upper > .nav-upper-item {
+  margin-bottom: 14px;
+}
+
+.nav-upper > .nav-upper-item > a {
+  display: inline-block;
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+.nav-lower {
+  list-style: none;
+  margin: 8px 0 0 18px;
+  padding: 0;
+  border-left: 2px solid #c5cde0;
+}
+
+.nav-lower-item {
+  margin: 4px 0;
+}
+
+.nav-lower-item a {
+  display: inline-block;
+  padding: 3px 0 3px 10px;
+  color: #2f4d88;
+}
+</style>
+
+</head>
+<body>
+<h2 id="page_top">基本画面要求一覧</h2>
+
+
+
+<table>
+    <tbody class="upper_request">
+      <tr>
+        <td id="upper-001" colspan="5">■ 解析対象プロジェクト入力画面</td>
+      </tr>
+      <tr>
+        <td rowspan="3">REQ-101</td>
+        <td>要求</td>
+        <td colspan="3">解析者がURI:/analysisにアクセスした際に解析対象プロジェクト入力画面を表示する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="3">- ユーザーが任意のプロジェクトを指定できるようにするため、入力フィールドおよび解析実行ボタンを提供する必要がある</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="3"></td>
+      </tr>
+    </tbody>
+    <tbody class="lower_request">
+      <tr>
+        <td class="upper_request" rowspan="10"></td>
+        <td id="lower-001-001" colspan="4">■ テキスト入力フィールドの提供</td>
+      </tr>
+      <tr>
+        <td rowspan="9">REQ-101.001</td>
+        <td>要求</td>
+        <td colspan="2">解析者が解析対象プロジェクト入力画面を表示した際にルートパスを入力するためのテキスト入力フィールドを提供する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="2">- テキスト入力フィールドにより、任意のパスを柔軟に入力できる</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="2">- 用語: ルートパスとは、解析対象となるJavaプロジェクトのルートディレクトリのフルパスを指す<br />- 用語: テキスト入力フィールドとは、HTMLのinput type=&quot;text&quot;要素を指す<br />- 範囲: テキスト入力フィールドによるフルパス形式での入力を受け付ける機能を含む<br />- 例: C:\workspace\java\MyProject のような形式で入力される<br />- 例: &lt;input type=&quot;text&quot; name=&quot;projectPath&quot; /&gt; のような形式で実装される</td>
+      </tr>
+      <tr>
+        <td colspan="3">■ テキスト入力フィールドの提供</td>
+      </tr>
+      <tr>
+        <td rowspan="5">SPC-101.001-001</td>
+        <td>[前提]</td>
+        <td>解析対象プロジェクト入力画面（URI:/analysis）が表示されていること。</td>
+      </tr>
+      <tr>
+        <td>[入力]</td>
+        <td>解析者が入力したルートパス（解析対象となるJavaプロジェクトのルートディレクトリのフルパス）を入力とする。</td>
+      </tr>
+      <tr>
+        <td>[処理]</td>
+        <td>HTMLのinput type=&quot;text&quot;要素を表示し、解析者がルートパスをテキスト入力できるようにする。入力値はバリデーションを実施し、有効なパス形式であることを確認する。</td>
+      </tr>
+      <tr>
+        <td>[出力]</td>
+        <td>入力されたルートパスを解析対象プロジェクト入力画面に表示し、解析実行ボタンがクリックされた際に値を受け渡し可能な状態にする。</td>
+      </tr>
+      <tr>
+        <td>[制約]</td>
+        <td>入力値はフルパス形式（例: C:\workspace\java\MyProject）である必要がある。相対パスや空文字列は無効とする。</td>
+      </tr>
+    </tbody>
+    <tbody class="lower_request">
+      <tr>
+        <td class="upper_request" rowspan="10"></td>
+        <td id="lower-001-002" colspan="4">■ 解析実行ボタンの提供</td>
+      </tr>
+      <tr>
+        <td rowspan="9">REQ-101.002</td>
+        <td>要求</td>
+        <td colspan="2">解析者が解析対象プロジェクト入力画面を表示した際に解析実行ボタンを提供する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="2">- ユーザーが明示的に解析を開始できる操作要素を提供するため</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="2">- 用語: 解析実行ボタンとは、HTMLのinput type=&quot;submit&quot;要素を指す<br />- 範囲: ボタンの表示とクリックイベントの受付を含む<br />- 例: &lt;input type=&quot;submit&quot; value=&quot;解析実行&quot; /&gt; のような形式で実装される</td>
+      </tr>
+      <tr>
+        <td colspan="3">■ 解析実行ボタンの提供</td>
+      </tr>
+      <tr>
+        <td rowspan="5">SPC-101.002-001</td>
+        <td>[前提]</td>
+        <td>解析対象プロジェクト入力画面（URI:/analysis）が表示されていること。</td>
+      </tr>
+      <tr>
+        <td>[入力]</td>
+        <td>解析者が解析実行ボタンをクリックしたイベントを入力とする。</td>
+      </tr>
+      <tr>
+        <td>[処理]</td>
+        <td>HTMLのinput type=&quot;submit&quot;要素を表示し、クリックイベントを受付ける。ボタンクリック時に、入力されたルートパスをリクエストパラメータとして送信し、解析処理を開始する。</td>
+      </tr>
+      <tr>
+        <td>[出力]</td>
+        <td>解析実行ボタンのクリックにより、解析処理が開始され、URI:/analysis/resultにリダイレクトされる。</td>
+      </tr>
+      <tr>
+        <td>[制約]</td>
+        <td>ルートパスが入力されていない場合、または無効なパスの場合はボタンを無効化するか、エラーメッセージを表示する。</td>
+      </tr>
+    </tbody>
+    <tbody class="upper_request">
+      <tr>
+        <td id="upper-002" colspan="5">■ 解析結果画面</td>
+      </tr>
+      <tr>
+        <td rowspan="3">REQ-102</td>
+        <td>要求</td>
+        <td colspan="3">解析者が解析対象プロジェクト入力画面の解析実行ボタンをクリックした後に、URI:/analysis/resultに遷移し、解析結果画面を表示する。</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="3">- 解析処理の完了を解析者に伝え、解析結果のサマリから解析処理が正しく実施されたことを解析者が確認できるようにする</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="3">- 用語: 解析結果とは、対象プロジェクトから抽出されたパッケージ、クラス、依存関係の情報を指す<br />- 範囲: 対象プロジェクトパス、パッケージリスト、クラス数、クラスリスト、依存関係の種類別件数リストの表示を含む<br />- 例: 解析実行後、画面にパッケージごとに整理されたクラスリストと依存関係が表示される</td>
+      </tr>
+    </tbody>
+    <tbody class="lower_request">
+      <tr>
+        <td class="upper_request" rowspan="10"></td>
+        <td id="lower-002-001" colspan="4">■ 対象プロジェクトパスの表示</td>
+      </tr>
+      <tr>
+        <td rowspan="9">REQ-102.001</td>
+        <td>要求</td>
+        <td colspan="2">解析処理が完了した時に解析結果画面に解析対象となったプロジェクトのパスを表示する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="2">- どのプロジェクトが解析されたかを明確に示すことで、ユーザーが結果の対象を確認できる</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="2">- 用語: 対象プロジェクトパスとは、解析処理が実行されたプロジェクトのルートディレクトリのフルパスを指す<br />- 範囲: 解析結果表示エリアにパス情報を表示する機能を含む<br />- 例: 「対象プロジェクト: C:\workspace\java\MyProject」のように表示される</td>
+      </tr>
+      <tr>
+        <td colspan="3">■ 対象プロジェクトパスの表示</td>
+      </tr>
+      <tr>
+        <td rowspan="5">SPC-102.001-001</td>
+        <td>[前提]</td>
+        <td>解析処理が完了し、解析結果画面（URI:/analysis/result）が表示される状態であること。</td>
+      </tr>
+      <tr>
+        <td>[入力]</td>
+        <td>解析処理で使用されたプロジェクトのルートディレクトリのフルパスを入力とする。</td>
+      </tr>
+      <tr>
+        <td>[処理]</td>
+        <td>解析結果画面の表示エリアに、解析対象となったプロジェクトのパス情報を文字列として表示する。</td>
+      </tr>
+      <tr>
+        <td>[出力]</td>
+        <td>解析結果画面に「対象プロジェクト: [パス]」のような形式でプロジェクトパスを表示する。</td>
+      </tr>
+      <tr>
+        <td>[制約]</td>
+        <td>パス情報は必ず表示され、空欄やnullは許容しない。表示形式は固定とする。</td>
+      </tr>
+    </tbody>
+    <tbody class="lower_request">
+      <tr>
+        <td class="upper_request" rowspan="10"></td>
+        <td id="lower-002-002" colspan="4">■ 解析結果の表示</td>
+      </tr>
+      <tr>
+        <td rowspan="9">REQ-102.002</td>
+        <td>要求</td>
+        <td colspan="2">解析結果をパッケージごとに分割して表示する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="2">- プロジェクトに含まれる大量クラスを一度にリスト表示すると見にくいため、分割して表示する。</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="2"></td>
+      </tr>
+      <tr>
+        <td colspan="3">■ 解析結果の表示</td>
+      </tr>
+      <tr>
+        <td rowspan="5">SPC-102.002-001</td>
+        <td>[前提]</td>
+        <td>解析処理が完了し、解析結果が取得済みであること。</td>
+      </tr>
+      <tr>
+        <td>[入力]</td>
+        <td>解析処理で取得された解析結果（パッケージ、クラス、依存関係の情報）を入力とする。</td>
+      </tr>
+      <tr>
+        <td>[処理]</td>
+        <td>解析結果をパッケージ単位でグループ化し、パッケージごとに分割して整理する。各パッケージの情報を独立したセクションとして画面に配置する。</td>
+      </tr>
+      <tr>
+        <td>[出力]</td>
+        <td>解析結果画面に、パッケージごとに分割された解析結果を表示する。</td>
+      </tr>
+      <tr>
+        <td>[制約]</td>
+        <td>パッケージが存在しない場合は空のリストとして表示する。パッケージごとの表示順序は任意とする。</td>
+      </tr>
+    </tbody>
+    <tbody class="lower_request">
+      <tr>
+        <td class="upper_request" rowspan="10"></td>
+        <td id="lower-002-003" colspan="4">■ クラス名の重複チェック・除去・ソート機能</td>
+      </tr>
+      <tr>
+        <td rowspan="9">REQ-102.003</td>
+        <td>要求</td>
+        <td colspan="2">解析結果（クラス名リスト）に対して重複を除去し、アルファベット順にソートした状態でサマリを作成する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="2">- 同じクラス名が複数回カウントされることを防ぐため、正確なクラス数を提示できる</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="2">- 用語: 重複除去とは、クラス名リストから同一のクラス名を1つにまとめる処理を指す<br />- 範囲: クラス名の重複チェック、重複除去、重複除去後のカウントを含む<br />- 例: 「UserController, ProductController, UserController」というリストから「ProductController, UserController」に変換し、クラス数は2とカウントする</td>
+      </tr>
+      <tr>
+        <td colspan="3">■ クラス名の重複チェック・除去・ソート機能</td>
+      </tr>
+      <tr>
+        <td rowspan="5">SPC-102.003-001</td>
+        <td>[前提]</td>
+        <td>解析結果が取得済みで、クラス名リストがパッケージごとに整理された状態であること。</td>
+      </tr>
+      <tr>
+        <td>[入力]</td>
+        <td>解析結果から取得したクラス名リスト（同一パッケージ内で重複を含む可能性があるクラス名のコレクション）を入力とする。</td>
+      </tr>
+      <tr>
+        <td>[処理]</td>
+        <td>Javaの`Stream.distinct()`メソッドを使用してクラス名の重複を除去し、`Set&lt;Class&gt;`を使用してエンティティレベルでの重複も防止する。重複除去後、クラス名をアルファベット順にソートして表示用のリストを作成する。クラス数のカウントも重複除去後の数で計算する。`Class`エンティティの`equals`と`hashCode`は`fullQualifiedName`に基づいて実装する。</td>
+      </tr>
+      <tr>
+        <td>[出力]</td>
+        <td>重複が除去され、アルファベット順にソートされたクラス名リストを解析結果画面に表示し、パッケージごとのクラス数も重複除去後の数で表示する。</td>
+      </tr>
+      <tr>
+        <td>[制約]</td>
+        <td>`Class`エンティティの`fullQualifiedName`が正しく設定されていることが前提である。同一パッケージ内での重複のみを対象とし、異なるパッケージ間での同名クラスは別クラスとして扱う。</td>
+      </tr>
+    </tbody>
+    <tbody class="lower_request">
+      <tr>
+        <td class="upper_request" rowspan="10"></td>
+        <td id="lower-002-004" colspan="4">■ パッケージ名の表示</td>
+      </tr>
+      <tr>
+        <td rowspan="9">REQ-102.004</td>
+        <td>要求</td>
+        <td colspan="2">各パッケージのパッケージ名をパッケージごとに整理された状態で解析結果画面に表示する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="2">- 取得されたパッケージ名よりから解析処理が正しく実施されたことを解析者が確認できるようにする</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="2">- 例: 「com.example.controller」「com.example.service」「com.example.repository」のように表示される</td>
+      </tr>
+      <tr>
+        <td colspan="3">■ パッケージ名の表示</td>
+      </tr>
+      <tr>
+        <td rowspan="5">SPC-102.004-001</td>
+        <td>[前提]</td>
+        <td>解析処理が完了し、解析結果がパッケージごとにグループ化された状態であること。</td>
+      </tr>
+      <tr>
+        <td>[入力]</td>
+        <td>各パッケージのパッケージ名（完全修飾名）を入力とする。</td>
+      </tr>
+      <tr>
+        <td>[処理]</td>
+        <td>パッケージごとに整理された解析結果から、各パッケージのパッケージ名を抽出し、パッケージごとのセクションに表示する。</td>
+      </tr>
+      <tr>
+        <td>[出力]</td>
+        <td>解析結果画面に、パッケージごとに整理された状態で各パッケージ名を表示する。</td>
+      </tr>
+      <tr>
+        <td>[制約]</td>
+        <td>パッケージ名は完全修飾名（例: com.example.controller）として表示する。パッケージ名が存在しない場合は表示しない。</td>
+      </tr>
+    </tbody>
+    <tbody class="lower_request">
+      <tr>
+        <td class="upper_request" rowspan="10"></td>
+        <td id="lower-002-005" colspan="4">■ クラス数の表示</td>
+      </tr>
+      <tr>
+        <td rowspan="9">REQ-102.005</td>
+        <td>要求</td>
+        <td colspan="2">各パッケージ含まれるクラス数をパッケージごとに整理された状態で解析結果画面に表示する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="2">- 検出されたクラス数から解析処理が正しく実施されたことを解析者が確認できるようにする</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="2">- 用語: クラス数とは、各パッケージ内に存在するユニークなクラス名の数を指す<br />- 範囲: パッケージごとのクラス数の集計と表示機能を含む<br />- 例: 「検出されたクラス数: 5」のように表示される</td>
+      </tr>
+      <tr>
+        <td colspan="3">■ クラス数の表示</td>
+      </tr>
+      <tr>
+        <td rowspan="5">SPC-102.005-001</td>
+        <td>[前提]</td>
+        <td>解析処理が完了し、各パッケージに含まれるクラス情報が取得済みであること。クラス名の重複チェック・除去処理が完了していること。</td>
+      </tr>
+      <tr>
+        <td>[入力]</td>
+        <td>各パッケージに含まれるクラス情報（重複除去後のクラスリスト）を入力とする。</td>
+      </tr>
+      <tr>
+        <td>[処理]</td>
+        <td>各パッケージに含まれるクラス数をカウントし、パッケージごとに整理された状態で数値を算出する。</td>
+      </tr>
+      <tr>
+        <td>[出力]</td>
+        <td>解析結果画面に、パッケージごとに整理された状態で各パッケージのクラス数を表示する。</td>
+      </tr>
+      <tr>
+        <td>[制約]</td>
+        <td>クラス数は重複除去後のユニークなクラス名の数でカウントする。クラスが存在しないパッケージは0件として表示する。</td>
+      </tr>
+    </tbody>
+    <tbody class="lower_request">
+      <tr>
+        <td class="upper_request" rowspan="10"></td>
+        <td id="lower-002-006" colspan="4">■ クラスリストの表示（パッケージごと、重複除去・ソート後）</td>
+      </tr>
+      <tr>
+        <td rowspan="9">REQ-102.006</td>
+        <td>要求</td>
+        <td colspan="2">各パッケージに含まれるクラスリストを、パッケージごとにアルファベット順に整理された状態で解析結果画面に表示する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="2">- パッケージごとのクラス一覧を表示することで、解析処理が正しく実施されたことを解析者が確認できるようにする</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="2">- 用語: クラスリストとは、各パッケージ内に存在するクラス名の一覧を指す（重複除去後、アルファベット順ソート済み）<br />- 範囲: パッケージごとのクラス名の一覧表示機能を含む<br />- 例: 「com.example.controller: UserController, ProductController, OrderController」のように表示される</td>
+      </tr>
+      <tr>
+        <td colspan="3">■ クラスリストの表示（パッケージごと、重複除去・ソート後）</td>
+      </tr>
+      <tr>
+        <td rowspan="5">SPC-102.006-001</td>
+        <td>[前提]</td>
+        <td>解析処理が完了し、各パッケージに含まれるクラス情報が取得済みであること。クラス名の重複チェック・除去・ソート処理が完了していること。</td>
+      </tr>
+      <tr>
+        <td>[入力]</td>
+        <td>各パッケージに含まれるクラスリスト（重複除去済み、アルファベット順ソート済み）を入力とする。</td>
+      </tr>
+      <tr>
+        <td>[処理]</td>
+        <td>パッケージごとに整理されたクラスリストを、アルファベット順にソートされた状態で表示用に整形する。</td>
+      </tr>
+      <tr>
+        <td>[出力]</td>
+        <td>解析結果画面に、パッケージごとにアルファベット順に整理された状態でクラスリストを表示する。</td>
+      </tr>
+      <tr>
+        <td>[制約]</td>
+        <td>クラス名は重複除去後、アルファベット順にソートされた状態で表示する。クラスが存在しないパッケージは空のリストとして表示する。</td>
+      </tr>
+    </tbody>
+    <tbody class="lower_request">
+      <tr>
+        <td class="upper_request" rowspan="10"></td>
+        <td id="lower-002-007" colspan="4">■ 依存関係の種類別件数リストの表示</td>
+      </tr>
+      <tr>
+        <td rowspan="9">REQ-102.007</td>
+        <td>要求</td>
+        <td colspan="2">各パッケージに含まれる依存関係の種類別件数をパッケージごとに整理された状態で解析結果画面に表示する</td>
+      </tr>
+      <tr>
+        <td>理由</td>
+        <td colspan="2">- 依存関係の種類と件数を把握することで、解析処理が正しく実施されたことを解析者が確認できるようにする</td>
+      </tr>
+      <tr>
+        <td>説明</td>
+        <td colspan="2">- 用語: 依存関係の種類とは、型依存、メソッド依存、フィールド依存などの依存関係のカテゴリを指す<br />- 範囲: パッケージごとの依存関係の種類別集計と表示機能を含む<br />- 例: 「com.example.controller: 型依存 10件、メソッド依存 5件、フィールド依存 3件」のように表示される</td>
+      </tr>
+      <tr>
+        <td colspan="3">■ 依存関係の種類別件数リストの表示</td>
+      </tr>
+      <tr>
+        <td rowspan="5">SPC-102.007-001</td>
+        <td>[前提]</td>
+        <td>解析処理が完了し、各パッケージに含まれる依存関係情報が取得済みであること。</td>
+      </tr>
+      <tr>
+        <td>[入力]</td>
+        <td>各パッケージに含まれる依存関係情報（種類別の依存関係レコード）を入力とする。</td>
+      </tr>
+      <tr>
+        <td>[処理]</td>
+        <td>各パッケージに含まれる依存関係を種類（型依存、メソッド依存、フィールド依存など）ごとに集計し、パッケージごとに整理する。</td>
+      </tr>
+      <tr>
+        <td>[出力]</td>
+        <td>解析結果画面に、パッケージごとに整理された状態で各パッケージの依存関係の種類別件数を表示する。</td>
+      </tr>
+      <tr>
+        <td>[制約]</td>
+        <td>依存関係の種類は定義されたカテゴリに基づいて分類する。依存関係が存在しない種類は0件として表示する。</td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <!-- Sidebar -->
+  <nav class="sidebar-nav">
+    <ul class="nav-upper">
+      <li class="nav-upper-item">
+        <a href="#upper-001">解析対象プロジェクト入力画面</a>
+        <ul class="nav-lower">
+          <li class="nav-lower-item"><a href="#lower-001-001">テキスト入力フィールドの提供</a></li>
+          <li class="nav-lower-item"><a href="#lower-001-002">解析実行ボタンの提供</a></li>
+        </ul>
+      </li>
+      <li class="nav-upper-item">
+        <a href="#upper-002">解析結果画面</a>
+        <ul class="nav-lower">
+          <li class="nav-lower-item"><a href="#lower-002-001">対象プロジェクトパスの表示</a></li>
+          <li class="nav-lower-item"><a href="#lower-002-002">解析結果の表示</a></li>
+          <li class="nav-lower-item"><a href="#lower-002-003">クラス名の重複チェック・除去・ソート機能</a></li>
+          <li class="nav-lower-item"><a href="#lower-002-004">パッケージ名の表示</a></li>
+          <li class="nav-lower-item"><a href="#lower-002-005">クラス数の表示</a></li>
+          <li class="nav-lower-item"><a href="#lower-002-006">クラスリストの表示（パッケージごと、重複除去・ソート後）</a></li>
+          <li class="nav-lower-item"><a href="#lower-002-007">依存関係の種類別件数リストの表示</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+
+  
+</body>
+</html>

@@ -1,0 +1,52 @@
+specification_id: SPC-101.001-001
+specification_title: テキスト入力フィールドの提供
+spec:
+- [前提] 解析対象プロジェクト入力画面（URI:/analysis）が表示されていること。
+- [入力] 解析者が入力したルートパス（解析対象となるJavaプロジェクトのルートディレクトリのフルパス）を入力とする。
+- [処理] HTMLのinput type="text"要素を表示し、解析者がルートパスをテキスト入力できるようにする。入力値はバリデーションを実施し、有効なパス形式であることを確認する。
+- [出力] 入力されたルートパスを解析対象プロジェクト入力画面に表示し、解析実行ボタンがクリックされた際に値を受け渡し可能な状態にする。
+- [制約] 入力値はフルパス形式（例: C:\workspace\java\MyProject）である必要がある。相対パスや空文字列は無効とする。
+
+input_fields:
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+|ルートパス|projectPath|String|解析対象となるJavaプロジェクトのルートディレクトリのフルパス。|
+
+output_fields:
+| 論理名 | 物理名 | 型 | 保存先（テーブル名） | 説明 |
+|---|---|---|---|---|
+|入力されたルートパス|projectPath|String|フォーム|解析者が入力したルートパス。解析実行ボタンクリック時に送信される。|
+
+data_flow_diagram:
+```mermaid
+flowchart TD
+    analyzer[外部エンティティ 解析オペレータ]
+    inputForm[データストア 入力フォーム]
+    display[データストア 画面表示]
+    proc_input((プロセス テキスト入力フィールド表示・入力受付))
+    analyzer -- 画面アクセス --> proc_input
+    proc_input -- 入力フィールド表示 --> display
+    analyzer -- ルートパス入力 --> proc_input
+    proc_input -- 入力値保存 --> inputForm
+    inputForm -- 入力値 --> analyzer
+```
+
+process_flowchart:
+```mermaid
+flowchart TD
+    start([開始])
+    displayForm[解析対象プロジェクト入力画面表示]
+    showInputField[テキスト入力フィールド表示]
+    waitInput[入力待ち]
+    receiveInput[ルートパス入力受信]
+    validate[パス形式バリデーション]
+    isValid{有効なパス形式か?}
+    saveInput[入力値をフォームに保存]
+    enableSubmit[解析実行ボタン有効化]
+    finish([終了])
+
+    start --> displayForm --> showInputField --> waitInput --> receiveInput --> validate --> isValid
+    isValid -- はい --> saveInput --> enableSubmit --> finish
+    isValid -- いいえ --> waitInput
+```
+

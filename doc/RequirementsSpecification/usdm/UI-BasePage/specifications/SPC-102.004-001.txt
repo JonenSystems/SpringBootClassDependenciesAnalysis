@@ -1,0 +1,44 @@
+specification_id: SPC-102.004-001
+specification_title: パッケージ名の表示
+spec:
+- [前提] 解析処理が完了し、解析結果がパッケージごとにグループ化された状態であること。
+- [入力] 各パッケージのパッケージ名（完全修飾名）を入力とする。
+- [処理] パッケージごとに整理された解析結果から、各パッケージのパッケージ名を抽出し、パッケージごとのセクションに表示する。
+- [出力] 解析結果画面に、パッケージごとに整理された状態で各パッケージ名を表示する。
+- [制約] パッケージ名は完全修飾名（例: com.example.controller）として表示する。パッケージ名が存在しない場合は表示しない。
+
+input_fields:
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+|パッケージ名|packageName|String|各パッケージの完全修飾名（例: com.example.controller）。|
+
+output_fields:
+| 論理名 | 物理名 | 型 | 保存先（テーブル名） | 説明 |
+|---|---|---|---|---|
+|表示用パッケージ名|displayPackageName|String|画面表示|解析結果画面に表示されるパッケージ名。|
+
+data_flow_diagram:
+```mermaid
+flowchart TD
+    analyzer[外部エンティティ 解析オペレータ]
+    analysisResult[データストア 解析結果]
+    displayStore[(データストア 画面表示)]
+    proc_display((プロセス パッケージ名表示))
+    analyzer -- 画面表示要求 --> proc_display
+    analysisResult -- パッケージ名 --> proc_display
+    proc_display -- 表示用パッケージ名 --> displayStore
+    displayStore -- 解析結果画面表示 --> analyzer
+```
+
+process_flowchart:
+```mermaid
+flowchart TD
+    start([開始])
+    receivePackageName[パッケージ名受信]
+    formatDisplay[表示形式に整形]
+    display[解析結果画面に表示]
+    finish([終了])
+
+    start --> receivePackageName --> formatDisplay --> display --> finish
+```
+

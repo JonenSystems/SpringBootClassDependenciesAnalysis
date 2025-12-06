@@ -1,0 +1,44 @@
+specification_id: SPC-102.006-001
+specification_title: クラスリストの表示（パッケージごと、重複除去・ソート後）
+spec:
+- [前提] 解析処理が完了し、各パッケージに含まれるクラス情報が取得済みであること。クラス名の重複チェック・除去・ソート処理が完了していること。
+- [入力] 各パッケージに含まれるクラスリスト（重複除去済み、アルファベット順ソート済み）を入力とする。
+- [処理] パッケージごとに整理されたクラスリストを、アルファベット順にソートされた状態で表示用に整形する。
+- [出力] 解析結果画面に、パッケージごとにアルファベット順に整理された状態でクラスリストを表示する。
+- [制約] クラス名は重複除去後、アルファベット順にソートされた状態で表示する。クラスが存在しないパッケージは空のリストとして表示する。
+
+input_fields:
+| 論理名 | 物理名 | 型 | 説明 |
+|---|---|---|---|
+|パッケージ別クラスリスト|packageClassList|Map<String, List<Class>>|パッケージ名をキーとした、重複除去・アルファベット順ソート済みのクラスリスト。|
+
+output_fields:
+| 論理名 | 物理名 | 型 | 保存先（テーブル名） | 説明 |
+|---|---|---|---|---|
+|表示用クラスリスト|displayClassList|Map<String, List<String>>|画面表示|パッケージ名をキーとした、表示用に整形されたクラス名リスト。|
+
+data_flow_diagram:
+```mermaid
+flowchart TD
+    analyzer[外部エンティティ 解析オペレータ]
+    analysisResult[データストア 解析結果]
+    displayStore[(データストア 画面表示)]
+    proc_display((プロセス クラスリスト表示))
+    analyzer -- 画面表示要求 --> proc_display
+    analysisResult -- パッケージ別クラスリスト --> proc_display
+    proc_display -- 表示用クラスリスト --> displayStore
+    displayStore -- 解析結果画面表示 --> analyzer
+```
+
+process_flowchart:
+```mermaid
+flowchart TD
+    start([開始])
+    receiveClassList[パッケージ別クラスリスト受信]
+    formatClassNames[クラス名を表示形式に整形]
+    display[解析結果画面に表示]
+    finish([終了])
+
+    start --> receiveClassList --> formatClassNames --> display --> finish
+```
+
