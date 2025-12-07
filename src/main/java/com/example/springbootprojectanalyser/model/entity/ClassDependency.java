@@ -1,56 +1,76 @@
 package com.example.springbootprojectanalyser.model.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * 依存関係エンティティ
- * クラス間の依存関係を保持する（主要テーブル）
+ * クラス依存関係エンティティ
  */
 @Entity
 @Table(name = "class_dependencies")
 public class ClassDependency {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "dependency_record_id", nullable = false)
-    private UUID dependencyRecordId;
+    @Column(nullable = false, unique = true)
+    private String dependencyRecordId;
 
-    @Column(name = "source_class_fqn", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_class_id", nullable = false)
+    private ClassEntity sourceClass;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_class_id")
+    private ClassEntity targetClass;
+
+    @Column(nullable = false)
     private String sourceClassFqn;
 
-    @Column(name = "target_identifier", nullable = false)
+    @Column(nullable = false)
     private String targetIdentifier;
 
-    @Column(name = "dependency_kind_code", nullable = false)
-    private String dependencyKindCode;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "dependency_kind_code", nullable = false)
+    private DependencyKindEntity dependencyKind;
 
-    @Column(name = "detected_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime detectedAt;
 
-    @Column(name = "analysis_batch_id")
-    private String analysisBatchId;
-
-    // JPA要件のためのデフォルトコンストラクタ
-    protected ClassDependency() {
+    public ClassDependency() {
     }
 
-    public ClassDependency(String sourceClassFqn, String targetIdentifier, String dependencyKindCode, String analysisBatchId) {
+    public ClassDependency(ClassEntity sourceClass, String sourceClassFqn, String targetIdentifier,
+            DependencyKindEntity dependencyKind) {
+        this.dependencyRecordId = UUID.randomUUID().toString();
+        this.sourceClass = sourceClass;
         this.sourceClassFqn = sourceClassFqn;
         this.targetIdentifier = targetIdentifier;
-        this.dependencyKindCode = dependencyKindCode;
-        this.analysisBatchId = analysisBatchId;
+        this.dependencyKind = dependencyKind;
         this.detectedAt = LocalDateTime.now();
     }
 
-    public UUID getDependencyRecordId() {
+    public String getDependencyRecordId() {
         return dependencyRecordId;
+    }
+
+    public void setDependencyRecordId(String dependencyRecordId) {
+        this.dependencyRecordId = dependencyRecordId;
+    }
+
+    public ClassEntity getSourceClass() {
+        return sourceClass;
+    }
+
+    public void setSourceClass(ClassEntity sourceClass) {
+        this.sourceClass = sourceClass;
+    }
+
+    public ClassEntity getTargetClass() {
+        return targetClass;
+    }
+
+    public void setTargetClass(ClassEntity targetClass) {
+        this.targetClass = targetClass;
     }
 
     public String getSourceClassFqn() {
@@ -69,12 +89,12 @@ public class ClassDependency {
         this.targetIdentifier = targetIdentifier;
     }
 
-    public String getDependencyKindCode() {
-        return dependencyKindCode;
+    public DependencyKindEntity getDependencyKind() {
+        return dependencyKind;
     }
 
-    public void setDependencyKindCode(String dependencyKindCode) {
-        this.dependencyKindCode = dependencyKindCode;
+    public void setDependencyKind(DependencyKindEntity dependencyKind) {
+        this.dependencyKind = dependencyKind;
     }
 
     public LocalDateTime getDetectedAt() {
@@ -84,13 +104,4 @@ public class ClassDependency {
     public void setDetectedAt(LocalDateTime detectedAt) {
         this.detectedAt = detectedAt;
     }
-
-    public String getAnalysisBatchId() {
-        return analysisBatchId;
-    }
-
-    public void setAnalysisBatchId(String analysisBatchId) {
-        this.analysisBatchId = analysisBatchId;
-    }
 }
-

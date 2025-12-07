@@ -1,81 +1,55 @@
 package com.example.springbootprojectanalyser.model.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-
 /**
- * 依存タイプエンティティ
- * 依存関係の種類を保持する（Enum相当）
+ * 依存タイプの列挙型
  */
-@Entity
-@Table(name = "dependency_kinds")
-public class DependencyKind {
+public enum DependencyKind {
+    /** 001_001: 継承（extends） */
+    EXTENDS("001_001", "継承（extends）"),
+    /** 001_002: 実装（implements） */
+    IMPLEMENTS("001_002", "実装（implements）"),
+    /** 001_003: ジェネリクス型参照 */
+    GENERIC_TYPE_REFERENCE("001_003", "ジェネリクス型参照"),
+    /** 001_004: 例外型依存 */
+    EXCEPTION_TYPE("001_004", "例外型依存"),
+    /** 001_005: メソッド呼び出し */
+    METHOD_CALL("001_005", "メソッド呼び出し"),
+    /** 001_006: 戻り値型依存 */
+    RETURN_TYPE("001_006", "戻り値型依存"),
+    /** 001_007: 引数型依存 */
+    PARAMETER_TYPE("001_007", "引数型依存"),
+    /** 001_008: 静的メソッド依存 */
+    STATIC_METHOD("001_008", "静的メソッド依存"),
+    /** 001_009: コンポジション（保持） */
+    COMPOSITION("001_009", "コンポジション（保持）"),
+    /** 001_010: 集合保持 */
+    COLLECTION_TYPE("001_010", "集合保持"),
+    /** 001_011: 定数参照 */
+    CONSTANT_REFERENCE("001_011", "定数参照");
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private final String code;
+    private final String description;
 
-    @Column(nullable = false, unique = true)
-    private String code;
-
-    @Column(nullable = false)
-    private String name;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
-    @Column(nullable = false)
-    private String category;
-
-    // JPA要件のためのデフォルトコンストラクタ
-    protected DependencyKind() {
-    }
-
-    public DependencyKind(String code, String name, String description, String category) {
+    DependencyKind(String code, String description) {
         this.code = code;
-        this.name = name;
         this.description = description;
-        this.category = category;
-    }
-
-    public Long getId() {
-        return id;
     }
 
     public String getCode() {
         return code;
     }
 
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getDescription() {
         return description;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
+    public static DependencyKind fromCode(String code) {
+        for (DependencyKind kind : values()) {
+            if (kind.code.equals(code)) {
+                return kind;
+            }
+        }
+        throw new IllegalArgumentException("Unknown dependency kind code: " + code);
     }
 }
 

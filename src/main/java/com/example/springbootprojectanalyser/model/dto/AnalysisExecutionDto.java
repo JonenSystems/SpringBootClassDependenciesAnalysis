@@ -1,9 +1,9 @@
 package com.example.springbootprojectanalyser.model.dto;
 
 /**
- * 解析リクエストDTO
+ * 解析実行DTO
  */
-public record AnalysisRequestDto(
+public record AnalysisExecutionDto(
     String targetProjectPath,
     String targetPackagePattern
 ) {

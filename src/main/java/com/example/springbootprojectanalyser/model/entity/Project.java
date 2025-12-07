@@ -1,16 +1,12 @@
 package com.example.springbootprojectanalyser.model.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * プロジェクトエンティティ
- * 解析対象プロジェクトの情報を保持する
  */
 @Entity
 @Table(name = "projects")
@@ -20,21 +16,22 @@ public class Project {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(name = "root_path", nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     private String rootPath;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    // JPA要件のためのデフォルトコンストラクタ
-    protected Project() {
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PackageInfo> packages = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ClassEntity> classes = new ArrayList<>();
+
+    public Project() {
     }
 
-    public Project(String name, String rootPath) {
-        this.name = name;
+    public Project(String rootPath) {
         this.rootPath = rootPath;
         this.createdAt = LocalDateTime.now();
     }
@@ -43,12 +40,8 @@ public class Project {
         return id;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getRootPath() {
@@ -65,6 +58,22 @@ public class Project {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<PackageInfo> getPackages() {
+        return packages;
+    }
+
+    public void setPackages(List<PackageInfo> packages) {
+        this.packages = packages;
+    }
+
+    public List<ClassEntity> getClasses() {
+        return classes;
+    }
+
+    public void setClasses(List<ClassEntity> classes) {
+        this.classes = classes;
     }
 }
 

@@ -1,5 +1,5 @@
 ---
-alwaysApply: false
+alwaysApply: true
 ---
 # 画面仕様
 
@@ -16,7 +16,7 @@ alwaysApply: false
 
 ## 全体構成
 
-以下の通り、ディレクトリを作成し、ファイルを配置すること
+以下の通り、ディレクトリを作成し、必要なファイルを配置すること
 ```
 src/
 ├── main/
