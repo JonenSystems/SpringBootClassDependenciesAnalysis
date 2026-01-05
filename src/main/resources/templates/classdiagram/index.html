@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>クラス図作成機能</title>
+    <link th:href="@{/css/style.css(v=${#dates.createNow().time})}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>クラス図作成機能</h1>
+        </header>
+
+        <main class="main-content">
+            <!-- 入力カード -->
+            <div class="analysis-form-section">
+                <h2>入力</h2>
+                <form th:action="@{/classdiagram/extract}" method="post" th:object="${form}">
+                    <div class="form-group">
+                        <label for="targetProjectPath">対象プロジェクト（パス） <span class="text-danger">*</span></label>
+                        <select id="targetProjectPath" th:field="*{targetProjectPath}" 
+                                class="form-control" 
+                                th:classappend="${#fields.hasErrors('targetProjectPath')} ? 'is-invalid' : ''" 
+                                required>
+                            <option value="">-- プロジェクトを選択してください --</option>
+                            <option th:each="project : ${projects}" 
+                                    th:value="${project.rootPath}"
+                                    th:text="${project.rootPath}">
+                            </option>
+                        </select>
+                        <div th:if="${#fields.hasErrors('targetProjectPath')}" class="invalid-feedback" 
+                             th:errors="*{targetProjectPath}"></div>
+                    </div>
+                    
+                    <button type="submit" id="extract-btn" class="btn btn-primary">解析開始</button>
+                </form>
+                
+                <div th:if="${endpoints != null and !endpoints.isEmpty()}" class="form-group" style="margin-top: 20px;">
+                    <h3>エンドポイント選択</h3>
+                    <form th:action="@{/classdiagram/generate}" method="post">
+                        <input type="hidden" name="projectId" th:value="${projectId}">
+                        <label for="endpoint-select">エンドポイント（URI(HTTPメソッド) : クラス名）</label>
+                        <select id="endpoint-select" name="selectedEndpointId" class="form-control" required>
+                            <option value="">-- エンドポイントを選択してください --</option>
+                            <option th:each="endpoint : ${endpoints}" 
+                                    th:value="${endpoint.endpointId}"
+                                    th:selected="${(selectedEndpointId != null and selectedEndpointId.toString().equals(endpoint.endpointId.toString())) or (form != null and form.selectedEndpointId != null and form.selectedEndpointId.toString().equals(endpoint.endpointId.toString()))}"
+                                    th:text="${endpoint.uri + '(' + endpoint.httpMethodName + ') : ' + endpoint.className}">
+                            </option>
+                        </select>
+                        <input type="hidden" id="selected-endpoint-id" th:value="${selectedEndpointId != null ? selectedEndpointId : (form != null ? form.selectedEndpointId : '')}">
+                        <input type="hidden" id="selected-endpoint-uri" th:value="${selectedEndpointUri != null ? selectedEndpointUri : ''}">
+                        <input type="hidden" id="selected-endpoint-http-method" th:value="${selectedEndpointHttpMethod != null ? selectedEndpointHttpMethod : ''}">
+                        <input type="hidden" id="selected-endpoint-class-name" th:value="${selectedEndpointClassName != null ? selectedEndpointClassName : ''}">
+                        <button type="submit" id="generate-btn" class="btn btn-success" style="margin-top: 10px;">クラス図生成</button>
+                    </form>
+                </div>
+            </div>
+
+            <div th:if="${error}" class="alert alert-danger">
+                <p th:text="${error}"></p>
+            </div>
+
+            <!-- 解析結果カード -->
+            <div th:if="${classDiagram}" class="analysis-result-section">
+                <h2>解析結果</h2>
+                
+                <div class="form-group">
+                    <button type="button" id="download-btn" class="btn btn-primary">クラス図ダウンロード</button>
+                </div>
+                
+                <div id="mermaid-diagram" class="mermaid"></div>
+                
+                <input type="hidden" id="class-diagram-text" th:value="${classDiagram.classDiagramText}">
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2024 Spring Boot Project Analyser. All rights reserved.</p>
+        </footer>
+    </div>
+    
+    <script th:src="@{/js/classdiagram/index.js(v=${#dates.createNow().time})}"></script>
+</body>
+</html>
+

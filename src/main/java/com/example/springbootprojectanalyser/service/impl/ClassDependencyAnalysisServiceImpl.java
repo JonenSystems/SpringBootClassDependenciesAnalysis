@@ -55,18 +55,30 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
     private final ClassEntityRepository classEntityRepository;
     private final ClassDependencyRepository classDependencyRepository;
     private final DependencyKindRepository dependencyKindRepository;
+    private final MemberRepository memberRepository;
+    private final MemberTypeRepository memberTypeRepository;
+    private final AnnotationRepository annotationRepository;
+    private final AnnotationAttributeRepository annotationAttributeRepository;
 
     public ClassDependencyAnalysisServiceImpl(
             ProjectRepository projectRepository,
             PackageInfoRepository packageInfoRepository,
             ClassEntityRepository classEntityRepository,
             ClassDependencyRepository classDependencyRepository,
-            DependencyKindRepository dependencyKindRepository) {
+            DependencyKindRepository dependencyKindRepository,
+            MemberRepository memberRepository,
+            MemberTypeRepository memberTypeRepository,
+            AnnotationRepository annotationRepository,
+            AnnotationAttributeRepository annotationAttributeRepository) {
         this.projectRepository = projectRepository;
         this.packageInfoRepository = packageInfoRepository;
         this.classEntityRepository = classEntityRepository;
         this.classDependencyRepository = classDependencyRepository;
         this.dependencyKindRepository = dependencyKindRepository;
+        this.memberRepository = memberRepository;
+        this.memberTypeRepository = memberTypeRepository;
+        this.annotationRepository = annotationRepository;
+        this.annotationAttributeRepository = annotationAttributeRepository;
     }
 
     @Override
@@ -84,6 +96,9 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
         }
 
         // 既存データを削除
+        annotationAttributeRepository.deleteAll();
+        annotationRepository.deleteAll();
+        memberRepository.deleteAll();
         classDependencyRepository.deleteAll();
         classEntityRepository.deleteAll();
         packageInfoRepository.deleteAll();
@@ -121,6 +136,9 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
 
         System.out.println("Parsed: " + parsedCount + ", Errors: " + errorCount);
         System.out.println("Packages: " + packageMap.size() + ", Classes: " + classMap.size());
+
+        // メンバー情報を抽出・保存
+        parseMembers(javaFiles, projectRoot, classMap);
 
         // Symbol Solverを生成
         JavaSymbolSolver symbolSolver = SymbolSolverFactory.createSymbolSolver(projectRoot);
@@ -244,7 +262,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     classDecl.getExtendedTypes().forEach(extendedType -> {
                         String targetFqn = TypeResolver.resolveFullyQualifiedName(extendedType, cu, packageName, classMap, symbolSolver);
                         if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                            saveDependency(sourceClass, sourceFqn, targetFqn, "001_001");
+                            saveDependency(sourceClass, sourceFqn, targetFqn, "001_001", classMap);
                         }
                     });
 
@@ -252,7 +270,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     classDecl.getImplementedTypes().forEach(implType -> {
                         String targetFqn = TypeResolver.resolveFullyQualifiedName(implType, cu, packageName, classMap, symbolSolver);
                         if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                            saveDependency(sourceClass, sourceFqn, targetFqn, "001_002");
+                            saveDependency(sourceClass, sourceFqn, targetFqn, "001_002", classMap);
                         }
                     });
 
@@ -262,7 +280,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         method.getThrownExceptions().forEach(exceptionType -> {
                             String targetFqn = TypeResolver.resolveFullyQualifiedName(exceptionType, cu, packageName, classMap, symbolSolver);
                             if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                                saveDependency(sourceClass, sourceFqn, targetFqn, "001_004");
+                                saveDependency(sourceClass, sourceFqn, targetFqn, "001_004", classMap);
                             }
                         });
                     });
@@ -275,7 +293,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (exceptionType != null) {
                                 String targetFqn = TypeResolver.resolveFullyQualifiedName(exceptionType, cu, packageName, classMap, symbolSolver);
                                 if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                                    saveDependency(sourceClass, sourceFqn, targetFqn, "001_004");
+                                    saveDependency(sourceClass, sourceFqn, targetFqn, "001_004", classMap);
                                 }
                             }
                         }
@@ -287,7 +305,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         if (returnType != null && !returnType.isVoidType() && !returnType.isPrimitiveType()) {
                             String targetFqn = TypeResolver.resolveFullyQualifiedName(returnType, cu, packageName, classMap, symbolSolver);
                             if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                                saveDependency(sourceClass, sourceFqn, targetFqn, "001_006");
+                                saveDependency(sourceClass, sourceFqn, targetFqn, "001_006", classMap);
                             }
                         }
                     });
@@ -298,7 +316,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         if (returnType != null && !returnType.isVoidType() && !returnType.isPrimitiveType()) {
                             extractGenericTypes(returnType, cu, packageName, classMap, symbolSolver).forEach(genericType -> {
                                 if (genericType != null && !genericType.isEmpty() && !isPrimitiveOrBasicType(genericType)) {
-                                    saveDependency(sourceClass, sourceFqn, genericType, "001_003");
+                                    saveDependency(sourceClass, sourceFqn, genericType, "001_003", classMap);
                                 }
                             });
                         }
@@ -311,7 +329,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (paramType != null && !paramType.isPrimitiveType()) {
                                 String targetFqn = TypeResolver.resolveFullyQualifiedName(paramType, cu, packageName, classMap, symbolSolver);
                                 if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                                    saveDependency(sourceClass, sourceFqn, targetFqn, "001_007");
+                                    saveDependency(sourceClass, sourceFqn, targetFqn, "001_007", classMap);
                                 }
                             }
                         });
@@ -324,7 +342,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (paramType != null && !paramType.isPrimitiveType()) {
                                 extractGenericTypes(paramType, cu, packageName, classMap, symbolSolver).forEach(genericType -> {
                                     if (genericType != null && !genericType.isEmpty() && !isPrimitiveOrBasicType(genericType)) {
-                                        saveDependency(sourceClass, sourceFqn, genericType, "001_003");
+                                        saveDependency(sourceClass, sourceFqn, genericType, "001_003", classMap);
                                     }
                                 });
                             }
@@ -340,7 +358,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (targetClassName != null && !targetClassName.isEmpty() 
                                     && !isPrimitiveOrBasicType(targetClassName)
                                     && !targetClassName.equals(className)) { // 自分自身の呼び出しは除外
-                                saveDependency(sourceClass, sourceFqn, targetClassName, "001_005");
+                                saveDependency(sourceClass, sourceFqn, targetClassName, "001_005", classMap);
                             }
                         }
                     });
@@ -354,7 +372,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (staticClassName != null && !staticClassName.isEmpty() 
                                     && !isPrimitiveOrBasicType(staticClassName)
                                     && !staticClassName.equals(className)) { // 自分自身の呼び出しは除外
-                                saveDependency(sourceClass, sourceFqn, staticClassName, "001_008");
+                                saveDependency(sourceClass, sourceFqn, staticClassName, "001_008", classMap);
                             }
                         }
                     });
@@ -377,7 +395,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         if (constantClassName != null && !constantClassName.isEmpty() 
                                 && !isPrimitiveOrBasicType(constantClassName)
                                 && !constantClassName.equals(className)) { // 自分自身の定数参照は除外
-                            saveDependency(sourceClass, sourceFqn, constantClassName, "001_011");
+                            saveDependency(sourceClass, sourceFqn, constantClassName, "001_011", classMap);
                         }
                     });
 
@@ -387,7 +405,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         if (fieldType != null && !fieldType.isPrimitiveType()) {
                             String targetFqn = TypeResolver.resolveFullyQualifiedName(fieldType, cu, packageName, classMap, symbolSolver);
                             if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                                saveDependency(sourceClass, sourceFqn, targetFqn, "001_009");
+                                saveDependency(sourceClass, sourceFqn, targetFqn, "001_009", classMap);
                             }
                         }
                     });
@@ -397,7 +415,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         Type fieldType = field.getCommonType();
                         extractGenericTypes(fieldType, cu, packageName, classMap, symbolSolver).forEach(genericType -> {
                             if (genericType != null && !genericType.isEmpty() && !isPrimitiveOrBasicType(genericType)) {
-                                saveDependency(sourceClass, sourceFqn, genericType, "001_003");
+                                saveDependency(sourceClass, sourceFqn, genericType, "001_003", classMap);
                             }
                         });
                     });
@@ -410,7 +428,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (paramType != null && !paramType.isPrimitiveType()) {
                                     String targetFqn = TypeResolver.resolveFullyQualifiedName(paramType, cu, packageName, classMap, symbolSolver);
                                     if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                                        saveDependency(sourceClass, sourceFqn, targetFqn, "002_001");
+                                        saveDependency(sourceClass, sourceFqn, targetFqn, "002_001", classMap);
                                     }
                                 }
                             });
@@ -425,7 +443,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (returnType != null && !returnType.isVoidType() && !returnType.isPrimitiveType()) {
                                     String targetFqn = TypeResolver.resolveFullyQualifiedName(returnType, cu, packageName, classMap, symbolSolver);
                                     if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                                        saveDependency(sourceClass, sourceFqn, targetFqn, "002_002");
+                                        saveDependency(sourceClass, sourceFqn, targetFqn, "002_002", classMap);
                                     }
                                 }
                             }
@@ -441,7 +459,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (paramType != null && !paramType.isPrimitiveType()) {
                                     String targetFqn = TypeResolver.resolveFullyQualifiedName(paramType, cu, packageName, classMap, symbolSolver);
                                     if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                                        saveDependency(sourceClass, sourceFqn, targetFqn, "002_003");
+                                        saveDependency(sourceClass, sourceFqn, targetFqn, "002_003", classMap);
                                     }
                                 }
                             });
@@ -455,7 +473,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (fieldType != null && !fieldType.isPrimitiveType()) {
                                 String targetFqn = TypeResolver.resolveFullyQualifiedName(fieldType, cu, packageName, classMap, symbolSolver);
                                 if (targetFqn != null && !targetFqn.isEmpty() && !isPrimitiveOrBasicType(targetFqn)) {
-                                    saveDependency(sourceClass, sourceFqn, targetFqn, "002_004");
+                                    saveDependency(sourceClass, sourceFqn, targetFqn, "002_004", classMap);
                                 }
                             }
                         }
@@ -464,13 +482,13 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     // 002_005: コントローラ定義（@RestController注釈）
                     if (hasAnnotation(classDecl, "RestController")) {
                         // コントローラ自体を依存関係として記録（依存先は自身のクラス名）
-                        saveDependency(sourceClass, sourceFqn, sourceFqn, "002_005");
+                        saveDependency(sourceClass, sourceFqn, sourceFqn, "002_005", classMap);
                     }
 
                     // 002_006: サービス層定義（@Service注釈）
                     if (hasAnnotation(classDecl, "Service")) {
                         // サービス層自体を依存関係として記録（依存先は自身のクラス名）
-                        saveDependency(sourceClass, sourceFqn, sourceFqn, "002_006");
+                        saveDependency(sourceClass, sourceFqn, sourceFqn, "002_006", classMap);
                     }
 
                     // 002_007: リポジトリ層定義（@Repositoryまたは*Repository命名/JpaRepository継承）
@@ -482,7 +500,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             });
                     if (isRepository) {
                         // リポジトリ層自体を依存関係として記録（依存先は自身のクラス名）
-                        saveDependency(sourceClass, sourceFqn, sourceFqn, "002_007");
+                        saveDependency(sourceClass, sourceFqn, sourceFqn, "002_007", classMap);
                     }
 
                     // 003_001: JPAリポジトリ（JpaRepositoryを継承しているクラス/インタフェース）
@@ -490,14 +508,14 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         String typeName = TypeResolver.resolveFullyQualifiedName(extendedType, cu, packageName, classMap, symbolSolver);
                         if (typeName != null && (typeName.equals("org.springframework.data.jpa.repository.JpaRepository") 
                                 || typeName.contains("JpaRepository"))) {
-                            saveDependency(sourceClass, sourceFqn, typeName, "003_001");
+                            saveDependency(sourceClass, sourceFqn, typeName, "003_001", classMap);
                         }
                     });
 
                     // 003_002: JPAエンティティ（@Entity注釈を持つクラス）
                     if (hasAnnotation(classDecl, "Entity")) {
                         // エンティティ自体を依存関係として記録（依存先は自身のクラス名）
-                        saveDependency(sourceClass, sourceFqn, sourceFqn, "003_002");
+                        saveDependency(sourceClass, sourceFqn, sourceFqn, "003_002", classMap);
                     }
 
                     // 003_003: クエリメソッド（Repositoryインタフェース内のメソッド名規約/@Query）
@@ -522,7 +540,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     || methodName.startsWith("delete")
                                     || methodName.startsWith("save")) {
                                 // クエリメソッド自体を依存関係として記録（依存先はメソッド名）
-                                saveDependency(sourceClass, sourceFqn, methodName, "003_003");
+                                saveDependency(sourceClass, sourceFqn, methodName, "003_003", classMap);
                             }
                         });
                     }
@@ -533,13 +551,13 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     boolean isDtoClass = className.endsWith("Dto") || className.endsWith("DTO");
                     if (isDtoPackage || isDtoClass) {
                         // DTO自体を依存関係として記録（依存先は自身のクラス名）
-                        saveDependency(sourceClass, sourceFqn, sourceFqn, "003_004");
+                        saveDependency(sourceClass, sourceFqn, sourceFqn, "003_004", classMap);
                     }
 
                     // 003_005: マッパー（@Mapper/@Mapping注釈を持つクラス/インタフェース）
                     if (hasAnnotation(classDecl, "Mapper")) {
                         // マッパー自体を依存関係として記録（依存先は自身のクラス名）
-                        saveDependency(sourceClass, sourceFqn, sourceFqn, "003_005");
+                        saveDependency(sourceClass, sourceFqn, sourceFqn, "003_005", classMap);
                         
                         // マッパーメソッドの引数と戻り値から変換関係を抽出
                         classDecl.findAll(MethodDeclaration.class).forEach(method -> {
@@ -550,7 +568,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     if (paramType != null && !paramType.isPrimitiveType()) {
                                         String sourceType = TypeResolver.resolveFullyQualifiedName(paramType, cu, packageName, classMap, symbolSolver);
                                         if (sourceType != null && !sourceType.isEmpty() && !isPrimitiveOrBasicType(sourceType)) {
-                                            saveDependency(sourceClass, sourceFqn, sourceType, "003_005");
+                                            saveDependency(sourceClass, sourceFqn, sourceType, "003_005", classMap);
                                         }
                                     }
                                 });
@@ -560,7 +578,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (returnType != null && !returnType.isVoidType() && !returnType.isPrimitiveType()) {
                                     String targetType = TypeResolver.resolveFullyQualifiedName(returnType, cu, packageName, classMap, symbolSolver);
                                     if (targetType != null && !targetType.isEmpty() && !isPrimitiveOrBasicType(targetType)) {
-                                        saveDependency(sourceClass, sourceFqn, targetType, "003_005");
+                                        saveDependency(sourceClass, sourceFqn, targetType, "003_005", classMap);
                                     }
                                 }
                             }
@@ -588,7 +606,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     if (key.contains(":")) {
                                         key = key.substring(0, key.indexOf(":"));
                                     }
-                                    saveDependency(sourceClass, sourceFqn, key, "004_001");
+                                    saveDependency(sourceClass, sourceFqn, key, "004_001", classMap);
                                 }
                             }
                         }
@@ -612,7 +630,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     if (key.contains(":")) {
                                         key = key.substring(0, key.indexOf(":"));
                                     }
-                                    saveDependency(sourceClass, sourceFqn, key, "004_001");
+                                    saveDependency(sourceClass, sourceFqn, key, "004_001", classMap);
                                 }
                             }
                         }
@@ -623,11 +641,11 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         String prefix = extractAnnotationAttributeValue(classDecl, "ConfigurationProperties", "prefix");
                         if (prefix != null && !prefix.isEmpty()) {
                             // 構成プロパティ自体を依存関係として記録（依存先はprefix）
-                            saveDependency(sourceClass, sourceFqn, prefix, "004_002");
+                            saveDependency(sourceClass, sourceFqn, prefix, "004_002", classMap);
                         } else {
                             // prefixが指定されていない場合、クラス名から推測（例: AppProperties → app）
                             String defaultPrefix = className.replaceAll("([A-Z])", "-$1").toLowerCase().replaceFirst("^-", "");
-                            saveDependency(sourceClass, sourceFqn, defaultPrefix, "004_002");
+                            saveDependency(sourceClass, sourceFqn, defaultPrefix, "004_002", classMap);
                         }
                     }
 
@@ -636,7 +654,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         String[] profiles = extractAnnotationAttributeArrayValue(classDecl, "Profile", "value");
                         if (profiles != null && profiles.length > 0) {
                             for (String profile : profiles) {
-                                saveDependency(sourceClass, sourceFqn, "profile:" + profile, "004_003");
+                                saveDependency(sourceClass, sourceFqn, "profile:" + profile, "004_003", classMap);
                             }
                         }
                     }
@@ -646,7 +664,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         String[] conditions = extractAnnotationAttributeArrayValue(classDecl, "Conditional", "value");
                         if (conditions != null && conditions.length > 0) {
                             for (String condition : conditions) {
-                                saveDependency(sourceClass, sourceFqn, "condition:" + condition, "004_003");
+                                saveDependency(sourceClass, sourceFqn, "condition:" + condition, "004_003", classMap);
                             }
                         }
                     }
@@ -654,7 +672,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     // 004_004: オートコンフィグ（@AutoConfiguration注釈を持つクラスを検出）
                     // 注: pom.xmlとMETA-INF/spring.factoriesの解析はparseAutoConfigurationメソッドで実装
                     if (hasAnnotation(classDecl, "AutoConfiguration")) {
-                        saveDependency(sourceClass, sourceFqn, sourceFqn, "004_004");
+                        saveDependency(sourceClass, sourceFqn, sourceFqn, "004_004", classMap);
                     }
 
                     // 004_005: ビルド依存
@@ -669,7 +687,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (paramType != null && !paramType.isPrimitiveType()) {
                                     String eventType = TypeResolver.resolveFullyQualifiedName(paramType, cu, packageName, classMap, symbolSolver);
                                     if (eventType != null && !eventType.isEmpty() && !isPrimitiveOrBasicType(eventType)) {
-                                        saveDependency(sourceClass, sourceFqn, eventType, "005_001");
+                                        saveDependency(sourceClass, sourceFqn, eventType, "005_001", classMap);
                                     }
                                 }
                             });
@@ -699,9 +717,9 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             String typeName = TypeResolver.resolveFullyQualifiedName(fieldType, cu, packageName, classMap, symbolSolver);
                             if (typeName != null) {
                                 if (typeName.contains("WebClient")) {
-                                    saveDependency(sourceClass, sourceFqn, "WebClient", "005_002");
+                                    saveDependency(sourceClass, sourceFqn, "WebClient", "005_002", classMap);
                                 } else if (typeName.contains("RestTemplate")) {
-                                    saveDependency(sourceClass, sourceFqn, "RestTemplate", "005_002");
+                                    saveDependency(sourceClass, sourceFqn, "RestTemplate", "005_002", classMap);
                                 }
                             }
                         }
@@ -714,7 +732,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         String targetIdentifier = serviceName != null && !serviceName.isEmpty() 
                                 ? serviceName 
                                 : (serviceUrl != null && !serviceUrl.isEmpty() ? serviceUrl : "FeignClient:" + className);
-                        saveDependency(sourceClass, sourceFqn, targetIdentifier, "005_002");
+                        saveDependency(sourceClass, sourceFqn, targetIdentifier, "005_002", classMap);
                     }
 
                     // 005_003: メッセージング（@KafkaListener/@RabbitListener等）
@@ -734,11 +752,11 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 String topics = extractAnnotationValue(kafkaListenerAnnotation, "topics");
                                 String topicPattern = extractAnnotationValue(kafkaListenerAnnotation, "topicPattern");
                                 if (topics != null && !topics.isEmpty()) {
-                                    saveDependency(sourceClass, sourceFqn, "kafka:topic:" + topics, "005_003");
+                                    saveDependency(sourceClass, sourceFqn, "kafka:topic:" + topics, "005_003", classMap);
                                 } else if (topicPattern != null && !topicPattern.isEmpty()) {
-                                    saveDependency(sourceClass, sourceFqn, "kafka:pattern:" + topicPattern, "005_003");
+                                    saveDependency(sourceClass, sourceFqn, "kafka:pattern:" + topicPattern, "005_003", classMap);
                                 } else {
-                                    saveDependency(sourceClass, sourceFqn, "kafka:listener:" + method.getNameAsString(), "005_003");
+                                    saveDependency(sourceClass, sourceFqn, "kafka:listener:" + method.getNameAsString(), "005_003", classMap);
                                 }
                             }
                         }
@@ -758,11 +776,11 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 String queues = extractAnnotationValue(rabbitListenerAnnotation, "queues");
                                 String queue = extractAnnotationValue(rabbitListenerAnnotation, "queue");
                                 if (queues != null && !queues.isEmpty()) {
-                                    saveDependency(sourceClass, sourceFqn, "rabbitmq:queue:" + queues, "005_003");
+                                    saveDependency(sourceClass, sourceFqn, "rabbitmq:queue:" + queues, "005_003", classMap);
                                 } else if (queue != null && !queue.isEmpty()) {
-                                    saveDependency(sourceClass, sourceFqn, "rabbitmq:queue:" + queue, "005_003");
+                                    saveDependency(sourceClass, sourceFqn, "rabbitmq:queue:" + queue, "005_003", classMap);
                                 } else {
-                                    saveDependency(sourceClass, sourceFqn, "rabbitmq:listener:" + method.getNameAsString(), "005_003");
+                                    saveDependency(sourceClass, sourceFqn, "rabbitmq:listener:" + method.getNameAsString(), "005_003", classMap);
                                 }
                             }
                         }
@@ -800,7 +818,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (readOnly != null && !readOnly.isEmpty()) {
                                     targetIdentifier.append(":readOnly=").append(readOnly);
                                 }
-                                saveDependency(sourceClass, sourceFqn, targetIdentifier.toString(), "006_001");
+                                saveDependency(sourceClass, sourceFqn, targetIdentifier.toString(), "006_001", classMap);
                             }
                         }
                     });
@@ -818,14 +836,14 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 .orElse(null);
                         
                         if (transactionalAnnotation != null) {
-                            saveDependency(sourceClass, sourceFqn, "Transaction:class-level", "006_001");
+                            saveDependency(sourceClass, sourceFqn, "Transaction:class-level", "006_001", classMap);
                         }
                     }
 
                     // 006_002: 横断的関心事（@Aspect/ポイントカットでの横断依存）
                     if (hasAnnotation(classDecl, "Aspect")) {
                         // @Aspectクラスを検出
-                        saveDependency(sourceClass, sourceFqn, "Aspect:" + className, "006_002");
+                        saveDependency(sourceClass, sourceFqn, "Aspect:" + className, "006_002", classMap);
                         
                         // ポイントカット式を抽出
                         classDecl.findAll(MethodDeclaration.class).forEach(method -> {
@@ -853,9 +871,9 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                         pointcut = extractAnnotationValue(adviceAnnotation, "pointcut");
                                     }
                                     if (pointcut != null && !pointcut.isEmpty()) {
-                                        saveDependency(sourceClass, sourceFqn, "Pointcut:" + pointcut, "006_002");
+                                        saveDependency(sourceClass, sourceFqn, "Pointcut:" + pointcut, "006_002", classMap);
                                     } else {
-                                        saveDependency(sourceClass, sourceFqn, "Advice:" + method.getNameAsString(), "006_002");
+                                        saveDependency(sourceClass, sourceFqn, "Advice:" + method.getNameAsString(), "006_002", classMap);
                                     }
                                 }
                             }
@@ -880,7 +898,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 String name = extractAnnotationValue(timedAnnotation, "name");
                                 String metricName = value != null && !value.isEmpty() ? value 
                                         : (name != null && !name.isEmpty() ? name : method.getNameAsString());
-                                saveDependency(sourceClass, sourceFqn, "Metric:Timed:" + metricName, "006_003");
+                                saveDependency(sourceClass, sourceFqn, "Metric:Timed:" + metricName, "006_003", classMap);
                             }
                         }
                         
@@ -900,7 +918,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 String name = extractAnnotationValue(countedAnnotation, "name");
                                 String metricName = value != null && !value.isEmpty() ? value 
                                         : (name != null && !name.isEmpty() ? name : method.getNameAsString());
-                                saveDependency(sourceClass, sourceFqn, "Metric:Counted:" + metricName, "006_003");
+                                saveDependency(sourceClass, sourceFqn, "Metric:Counted:" + metricName, "006_003", classMap);
                             }
                         }
                     });
@@ -912,7 +930,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (typeName.contains("Logger") || typeName.contains("Log")) {
                                 if (typeName.contains("org.slf4j.Logger") || typeName.contains("org.apache.logging.log4j.Logger")
                                         || typeName.contains("java.util.logging.Logger")) {
-                                    saveDependency(sourceClass, sourceFqn, "Logger:" + typeName, "006_003");
+                                    saveDependency(sourceClass, sourceFqn, "Logger:" + typeName, "006_003", classMap);
                                 }
                             }
                         });
@@ -952,7 +970,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     || annotationName.equals("javax.validation.constraints.Max")
                                     || annotationName.equals("javax.validation.constraints.Email")
                                     || annotationName.equals("javax.validation.constraints.Pattern")) {
-                                saveDependency(sourceClass, sourceFqn, "Validation:" + annotationName, "006_004");
+                                saveDependency(sourceClass, sourceFqn, "Validation:" + annotationName, "006_004", classMap);
                             }
                         });
                     });
@@ -966,7 +984,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (annotationName.equals("Valid") || annotationName.endsWith(".Valid")
                                         || annotationName.equals("jakarta.validation.Valid")
                                         || annotationName.equals("javax.validation.Valid")) {
-                                    saveDependency(sourceClass, sourceFqn, "Validation:@Valid:" + parameter.getNameAsString(), "006_004");
+                                    saveDependency(sourceClass, sourceFqn, "Validation:@Valid:" + parameter.getNameAsString(), "006_004", classMap);
                                 }
                                 
                                 // パラメータのBean Validation注釈
@@ -994,7 +1012,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                         || annotationName.equals("javax.validation.constraints.Max")
                                         || annotationName.equals("javax.validation.constraints.Email")
                                         || annotationName.equals("javax.validation.constraints.Pattern")) {
-                                    saveDependency(sourceClass, sourceFqn, "Validation:" + annotationName + ":" + parameter.getNameAsString(), "006_004");
+                                    saveDependency(sourceClass, sourceFqn, "Validation:" + annotationName + ":" + parameter.getNameAsString(), "006_004", classMap);
                                 }
                             });
                         });
@@ -1005,7 +1023,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         if (hasAnnotation(method, "Bean")) {
                             String returnType = method.getType().asString();
                             if (returnType.contains("SecurityFilterChain")) {
-                                saveDependency(sourceClass, sourceFqn, "SecurityFilterChain:" + method.getNameAsString(), "007_001");
+                                saveDependency(sourceClass, sourceFqn, "SecurityFilterChain:" + method.getNameAsString(), "007_001", classMap);
                             }
                         }
                     });
@@ -1021,7 +1039,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     || methodName.equals("hasRole") || methodName.equals("hasAnyRole")
                                     || methodName.equals("hasAuthority") || methodName.equals("hasAnyAuthority")
                                     || methodName.equals("access") || methodName.equals("denyAll")) {
-                                saveDependency(sourceClass, sourceFqn, "HttpSecurity:" + methodName, "007_002");
+                                saveDependency(sourceClass, sourceFqn, "HttpSecurity:" + methodName, "007_002", classMap);
                             }
                         });
                     });
@@ -1029,7 +1047,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     // 007_003: UserDetails（UserDetails実装クラス）
                     if (classDecl.getExtendedTypes().stream().anyMatch(type -> 
                             type.getNameAsString().contains("UserDetails"))) {
-                        saveDependency(sourceClass, sourceFqn, "UserDetails:implementation", "007_003");
+                        saveDependency(sourceClass, sourceFqn, "UserDetails:implementation", "007_003", classMap);
                     }
                     
                     // GrantedAuthority供給箇所を検出
@@ -1038,7 +1056,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             String methodName = methodCall.getNameAsString();
                             if (methodName.equals("getAuthorities") || methodName.equals("getRoles")
                                     || methodName.contains("GrantedAuthority")) {
-                                saveDependency(sourceClass, sourceFqn, "GrantedAuthority:" + methodName, "007_003");
+                                saveDependency(sourceClass, sourceFqn, "GrantedAuthority:" + methodName, "007_003", classMap);
                             }
                         });
                     });
@@ -1046,12 +1064,12 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     // 007_004: UserDetailsService（loadUserByUsernameメソッドを持つ実装クラス）
                     if (classDecl.getImplementedTypes().stream().anyMatch(type -> 
                             type.getNameAsString().contains("UserDetailsService"))) {
-                        saveDependency(sourceClass, sourceFqn, "UserDetailsService:implementation", "007_004");
+                        saveDependency(sourceClass, sourceFqn, "UserDetailsService:implementation", "007_004", classMap);
                     }
                     
                     classDecl.findAll(MethodDeclaration.class).forEach(method -> {
                         if (method.getNameAsString().equals("loadUserByUsername")) {
-                            saveDependency(sourceClass, sourceFqn, "UserDetailsService:loadUserByUsername", "007_004");
+                            saveDependency(sourceClass, sourceFqn, "UserDetailsService:loadUserByUsername", "007_004", classMap);
                         }
                     });
 
@@ -1060,7 +1078,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         if (hasAnnotation(method, "Bean")) {
                             String returnType = method.getType().asString();
                             if (returnType.contains("PasswordEncoder")) {
-                                saveDependency(sourceClass, sourceFqn, "PasswordEncoder:@Bean:" + method.getNameAsString(), "007_005");
+                                saveDependency(sourceClass, sourceFqn, "PasswordEncoder:@Bean:" + method.getNameAsString(), "007_005", classMap);
                             }
                         }
                     });
@@ -1070,7 +1088,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         field.getVariables().forEach(variable -> {
                             String typeName = variable.getType().asString();
                             if (typeName.contains("PasswordEncoder")) {
-                                saveDependency(sourceClass, sourceFqn, "PasswordEncoder:field:" + variable.getNameAsString(), "007_005");
+                                saveDependency(sourceClass, sourceFqn, "PasswordEncoder:field:" + variable.getNameAsString(), "007_005", classMap);
                             }
                         });
                     });
@@ -1079,7 +1097,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         method.getParameters().forEach(parameter -> {
                             String typeName = parameter.getType().asString();
                             if (typeName.contains("PasswordEncoder")) {
-                                saveDependency(sourceClass, sourceFqn, "PasswordEncoder:parameter:" + parameter.getNameAsString(), "007_005");
+                                saveDependency(sourceClass, sourceFqn, "PasswordEncoder:parameter:" + parameter.getNameAsString(), "007_005", classMap);
                             }
                         });
                         
@@ -1088,7 +1106,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             String methodName = methodCall.getNameAsString();
                             if (methodName.contains("PasswordEncoder") || methodName.contains("BCrypt")
                                     || methodName.contains("Argon2") || methodName.contains("Pbkdf2")) {
-                                saveDependency(sourceClass, sourceFqn, "PasswordEncoder:new:" + methodName, "007_005");
+                                saveDependency(sourceClass, sourceFqn, "PasswordEncoder:new:" + methodName, "007_005", classMap);
                             }
                         });
                     });
@@ -1102,11 +1120,11 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (methodCall.getScope().isPresent()) {
                                     String scopeName = methodCall.getScope().get().toString();
                                     if (scopeName.contains("AuthenticationManager") || scopeName.contains("authenticationManager")) {
-                                        saveDependency(sourceClass, sourceFqn, "AuthenticationManager:authenticate", "007_006");
+                                        saveDependency(sourceClass, sourceFqn, "AuthenticationManager:authenticate", "007_006", classMap);
                                     }
                                 } else {
                                     // スコープがない場合は、フィールドやパラメータから推測
-                                    saveDependency(sourceClass, sourceFqn, "AuthenticationManager:authenticate", "007_006");
+                                    saveDependency(sourceClass, sourceFqn, "AuthenticationManager:authenticate", "007_006", classMap);
                                 }
                             }
                         });
@@ -1115,14 +1133,14 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     // 007_007: AuthenticationProvider（実装/Bean登録）
                     if (classDecl.getImplementedTypes().stream().anyMatch(type -> 
                             type.getNameAsString().contains("AuthenticationProvider"))) {
-                        saveDependency(sourceClass, sourceFqn, "AuthenticationProvider:implementation", "007_007");
+                        saveDependency(sourceClass, sourceFqn, "AuthenticationProvider:implementation", "007_007", classMap);
                     }
                     
                     classDecl.findAll(MethodDeclaration.class).forEach(method -> {
                         if (hasAnnotation(method, "Bean")) {
                             String returnType = method.getType().asString();
                             if (returnType.contains("AuthenticationProvider")) {
-                                saveDependency(sourceClass, sourceFqn, "AuthenticationProvider:@Bean:" + method.getNameAsString(), "007_007");
+                                saveDependency(sourceClass, sourceFqn, "AuthenticationProvider:@Bean:" + method.getNameAsString(), "007_007", classMap);
                             }
                         }
                     });
@@ -1130,12 +1148,12 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     // 007_008: OncePerRequestFilter（継承/doFilterInternal実装）
                     if (classDecl.getExtendedTypes().stream().anyMatch(type -> 
                             type.getNameAsString().contains("OncePerRequestFilter"))) {
-                        saveDependency(sourceClass, sourceFqn, "OncePerRequestFilter:extends", "007_008");
+                        saveDependency(sourceClass, sourceFqn, "OncePerRequestFilter:extends", "007_008", classMap);
                     }
                     
                     classDecl.findAll(MethodDeclaration.class).forEach(method -> {
                         if (method.getNameAsString().equals("doFilterInternal")) {
-                            saveDependency(sourceClass, sourceFqn, "OncePerRequestFilter:doFilterInternal", "007_008");
+                            saveDependency(sourceClass, sourceFqn, "OncePerRequestFilter:doFilterInternal", "007_008", classMap);
                         }
                     });
 
@@ -1158,7 +1176,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 String value = extractAnnotationValue(securityAnnotation, "value");
                                 String annotationName = securityAnnotation.getNameAsString();
                                 String targetIdentifier = annotationName + (value != null && !value.isEmpty() ? ":" + value : "");
-                                saveDependency(sourceClass, sourceFqn, targetIdentifier, "007_009");
+                                saveDependency(sourceClass, sourceFqn, targetIdentifier, "007_009", classMap);
                             }
                         }
                     });
@@ -1174,12 +1192,12 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     Expression arg = methodCall.getArguments().get(0);
                                     if (arg instanceof StringLiteralExpr) {
                                         String roleName = ((StringLiteralExpr) arg).getValue();
-                                        saveDependency(sourceClass, sourceFqn, "Role:" + roleName, "007_010");
+                                        saveDependency(sourceClass, sourceFqn, "Role:" + roleName, "007_010", classMap);
                                     } else {
-                                        saveDependency(sourceClass, sourceFqn, "Role:" + methodName, "007_010");
+                                        saveDependency(sourceClass, sourceFqn, "Role:" + methodName, "007_010", classMap);
                                     }
                                 } else {
-                                    saveDependency(sourceClass, sourceFqn, "Role:" + methodName, "007_010");
+                                    saveDependency(sourceClass, sourceFqn, "Role:" + methodName, "007_010", classMap);
                                 }
                             }
                         });
@@ -1193,11 +1211,11 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (methodCall.getScope().isPresent()) {
                                     String scopeName = methodCall.getScope().get().toString();
                                     if (scopeName.contains("SecurityContextHolder")) {
-                                        saveDependency(sourceClass, sourceFqn, "SecurityContext:getContext", "007_011");
+                                        saveDependency(sourceClass, sourceFqn, "SecurityContext:getContext", "007_011", classMap);
                                     }
                                 }
                             } else if (methodName.equals("getAuthentication") || methodName.equals("setAuthentication")) {
-                                saveDependency(sourceClass, sourceFqn, "SecurityContext:" + methodName, "007_011");
+                                saveDependency(sourceClass, sourceFqn, "SecurityContext:" + methodName, "007_011", classMap);
                             }
                         });
                     });
@@ -1207,7 +1225,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         method.findAll(MethodCallExpr.class).forEach(methodCall -> {
                             String methodName = methodCall.getNameAsString();
                             if (methodName.equals("sessionManagement") || methodName.equals("sessionCreationPolicy")) {
-                                saveDependency(sourceClass, sourceFqn, "SessionManagement:" + methodName, "007_012");
+                                saveDependency(sourceClass, sourceFqn, "SessionManagement:" + methodName, "007_012", classMap);
                             }
                         });
                     });
@@ -1223,7 +1241,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                         .anyMatch(arg -> arg.toString().contains("Authorization") 
                                                 || arg.toString().contains("Bearer"));
                                 if (hasAuthHeader || methodName.contains("Authorization") || methodName.contains("Bearer")) {
-                                    saveDependency(sourceClass, sourceFqn, "TokenExtraction:" + methodName, "007_013");
+                                    saveDependency(sourceClass, sourceFqn, "TokenExtraction:" + methodName, "007_013", classMap);
                                 }
                             }
                         });
@@ -1237,7 +1255,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     || methodName.contains("Verifier") || methodName.contains("Parser")
                                     || methodName.contains("verify") || methodName.contains("parse")
                                     || methodName.contains("Nimbus") || methodName.contains("JwtDecoder")) {
-                                saveDependency(sourceClass, sourceFqn, "JWT:" + methodName, "007_014");
+                                saveDependency(sourceClass, sourceFqn, "JWT:" + methodName, "007_014", classMap);
                             }
                         });
                     });
@@ -1249,7 +1267,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (typeName.contains("JWT") || typeName.contains("Jws") 
                                     || typeName.contains("JwtDecoder") || typeName.contains("JwtEncoder")
                                     || typeName.contains("Nimbus")) {
-                                saveDependency(sourceClass, sourceFqn, "JWT:type:" + typeName, "007_014");
+                                saveDependency(sourceClass, sourceFqn, "JWT:type:" + typeName, "007_014", classMap);
                             }
                         });
                     });
@@ -1261,7 +1279,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (methodName.contains("getClaim") || methodName.contains("getClaims")
                                     || (methodName.contains("GrantedAuthority") && methodCall.getArguments().size() > 0)) {
                                 // claimsから権限への変換を検出
-                                saveDependency(sourceClass, sourceFqn, "ClaimToAuthority:" + methodName, "007_015");
+                                saveDependency(sourceClass, sourceFqn, "ClaimToAuthority:" + methodName, "007_015", classMap);
                             }
                         });
                     });
@@ -1275,7 +1293,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     || methodName.equals("loginProcessingUrl") || methodName.equals("defaultSuccessUrl")
                                     || methodName.equals("failureUrl") || methodName.equals("logoutUrl")
                                     || methodName.equals("logoutSuccessUrl")) {
-                                saveDependency(sourceClass, sourceFqn, "LoginLogout:" + methodName, "007_016");
+                                saveDependency(sourceClass, sourceFqn, "LoginLogout:" + methodName, "007_016", classMap);
                             }
                         });
                     });
@@ -1290,10 +1308,10 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     || methodName.equals("disable") || methodName.equals("and")) {
                                 // disable()の前後でcors()やcsrf()が呼ばれているか確認
                                 if (methodName.equals("cors") || methodName.equals("csrf")) {
-                                    saveDependency(sourceClass, sourceFqn, "CorsCsrf:" + methodName, "007_017");
+                                    saveDependency(sourceClass, sourceFqn, "CorsCsrf:" + methodName, "007_017", classMap);
                                 } else if (methodName.equals("disable")) {
                                     // 前のメソッド呼び出しを確認（簡易実装）
-                                    saveDependency(sourceClass, sourceFqn, "CorsCsrf:disable", "007_017");
+                                    saveDependency(sourceClass, sourceFqn, "CorsCsrf:disable", "007_017", classMap);
                                 }
                             }
                         });
@@ -1316,7 +1334,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 || annotationName.endsWith(".EqualsAndHashCode") || annotationName.endsWith(".Slf4j")
                                 || annotationName.endsWith(".Log") || annotationName.endsWith(".Value")
                                 || annotationName.endsWith(".With")) {
-                            saveDependency(sourceClass, sourceFqn, "Lombok:" + annotationName, "008_001");
+                            saveDependency(sourceClass, sourceFqn, "Lombok:" + annotationName, "008_001", classMap);
                         }
                     });
                     
@@ -1327,7 +1345,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             if (annotationName.startsWith("lombok.") || annotationName.equals("Getter")
                                     || annotationName.equals("Setter") || annotationName.endsWith(".Getter")
                                     || annotationName.endsWith(".Setter")) {
-                                saveDependency(sourceClass, sourceFqn, "Lombok:" + annotationName, "008_001");
+                                saveDependency(sourceClass, sourceFqn, "Lombok:" + annotationName, "008_001", classMap);
                             }
                         });
                     });
@@ -1336,7 +1354,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         method.getAnnotations().forEach(annotation -> {
                             String annotationName = annotation.getNameAsString();
                             if (annotationName.startsWith("lombok.")) {
-                                saveDependency(sourceClass, sourceFqn, "Lombok:" + annotationName, "008_001");
+                                saveDependency(sourceClass, sourceFqn, "Lombok:" + annotationName, "008_001", classMap);
                             }
                         });
                     });
@@ -1348,7 +1366,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     || annotationName.equals("NoArgsConstructor") || annotationName.equals("RequiredArgsConstructor")
                                     || annotationName.endsWith(".AllArgsConstructor") || annotationName.endsWith(".NoArgsConstructor")
                                     || annotationName.endsWith(".RequiredArgsConstructor")) {
-                                saveDependency(sourceClass, sourceFqn, "Lombok:" + annotationName, "008_001");
+                                saveDependency(sourceClass, sourceFqn, "Lombok:" + annotationName, "008_001", classMap);
                             }
                         });
                     });
@@ -1360,7 +1378,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             String typeName = variable.getType().asString();
                             if (typeName.contains("ObjectMapper") || typeName.contains("JsonNode")
                                     || typeName.contains("ObjectReader") || typeName.contains("ObjectWriter")) {
-                                saveDependency(sourceClass, sourceFqn, "Jackson:ObjectMapper:" + typeName, "008_002");
+                                saveDependency(sourceClass, sourceFqn, "Jackson:ObjectMapper:" + typeName, "008_002", classMap);
                             }
                         });
                     });
@@ -1370,7 +1388,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             String typeName = parameter.getType().asString();
                             if (typeName.contains("ObjectMapper") || typeName.contains("JsonNode")
                                     || typeName.contains("ObjectReader") || typeName.contains("ObjectWriter")) {
-                                saveDependency(sourceClass, sourceFqn, "Jackson:ObjectMapper:" + typeName, "008_002");
+                                saveDependency(sourceClass, sourceFqn, "Jackson:ObjectMapper:" + typeName, "008_002", classMap);
                             }
                         });
                         
@@ -1384,10 +1402,10 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (methodCall.getScope().isPresent()) {
                                     String scopeName = methodCall.getScope().get().toString();
                                     if (scopeName.contains("ObjectMapper") || scopeName.contains("objectMapper")) {
-                                        saveDependency(sourceClass, sourceFqn, "Jackson:ObjectMapper:" + methodName, "008_002");
+                                        saveDependency(sourceClass, sourceFqn, "Jackson:ObjectMapper:" + methodName, "008_002", classMap);
                                     }
                                 } else {
-                                    saveDependency(sourceClass, sourceFqn, "Jackson:ObjectMapper:" + methodName, "008_002");
+                                    saveDependency(sourceClass, sourceFqn, "Jackson:ObjectMapper:" + methodName, "008_002", classMap);
                                 }
                             }
                         });
@@ -1406,7 +1424,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 || annotationName.endsWith(".JsonProperty") || annotationName.endsWith(".JsonManagedReference")
                                 || annotationName.endsWith(".JsonBackReference") || annotationName.endsWith(".JsonIdentityInfo")
                                 || annotationName.endsWith(".JsonTypeInfo") || annotationName.contains("com.fasterxml.jackson")) {
-                            saveDependency(sourceClass, sourceFqn, "Jackson:annotation:" + annotationName, "008_002");
+                            saveDependency(sourceClass, sourceFqn, "Jackson:annotation:" + annotationName, "008_002", classMap);
                         }
                     });
                     
@@ -1421,7 +1439,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     || annotationName.endsWith(".JsonInclude") || annotationName.endsWith(".JsonFormat")
                                     || annotationName.endsWith(".JsonProperty") || annotationName.endsWith(".JsonManagedReference")
                                     || annotationName.endsWith(".JsonBackReference") || annotationName.contains("com.fasterxml.jackson")) {
-                                saveDependency(sourceClass, sourceFqn, "Jackson:annotation:" + annotationName, "008_002");
+                                saveDependency(sourceClass, sourceFqn, "Jackson:annotation:" + annotationName, "008_002", classMap);
                             }
                         });
                     });
@@ -1435,7 +1453,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     || annotationName.endsWith(".JsonIgnore") || annotationName.endsWith(".JsonIgnoreProperties")
                                     || annotationName.endsWith(".JsonInclude") || annotationName.endsWith(".JsonFormat")
                                     || annotationName.endsWith(".JsonProperty") || annotationName.contains("com.fasterxml.jackson")) {
-                                saveDependency(sourceClass, sourceFqn, "Jackson:annotation:" + annotationName, "008_002");
+                                saveDependency(sourceClass, sourceFqn, "Jackson:annotation:" + annotationName, "008_002", classMap);
                             }
                         });
                     });
@@ -1467,12 +1485,12 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                                 variable.getType(), cu, packageName, classMap, symbolSolver);
                                         if (resolvedType != null && (resolvedType.contains("Service") || 
                                                 classMap.containsKey(resolvedType))) {
-                                            saveDependency(sourceClass, sourceFqn, resolvedType, "009_001");
+                                            saveDependency(sourceClass, sourceFqn, resolvedType, "009_001", classMap);
                                         }
                                     }
                                 } else if (typeName.contains("Service")) {
                                     // 型名にServiceが含まれる場合、簡易的に記録
-                                    saveDependency(sourceClass, sourceFqn, typeName, "009_001");
+                                    saveDependency(sourceClass, sourceFqn, typeName, "009_001", classMap);
                                 }
                             });
                         });
@@ -1485,9 +1503,9 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     String resolvedType = TypeResolver.resolveFullyQualifiedName(
                                             parameter.getType(), cu, packageName, classMap, symbolSolver);
                                     if (resolvedType != null) {
-                                        saveDependency(sourceClass, sourceFqn, resolvedType, "009_001");
+                                        saveDependency(sourceClass, sourceFqn, resolvedType, "009_001", classMap);
                                     } else {
-                                        saveDependency(sourceClass, sourceFqn, typeName, "009_001");
+                                        saveDependency(sourceClass, sourceFqn, typeName, "009_001", classMap);
                                     }
                                 }
                             });
@@ -1505,9 +1523,9 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     String resolvedType = TypeResolver.resolveFullyQualifiedName(
                                             variable.getType(), cu, packageName, classMap, symbolSolver);
                                     if (resolvedType != null) {
-                                        saveDependency(sourceClass, sourceFqn, resolvedType, "009_002");
+                                        saveDependency(sourceClass, sourceFqn, resolvedType, "009_002", classMap);
                                     } else {
-                                        saveDependency(sourceClass, sourceFqn, typeName, "009_002");
+                                        saveDependency(sourceClass, sourceFqn, typeName, "009_002", classMap);
                                     }
                                 }
                             });
@@ -1521,9 +1539,9 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                     String resolvedType = TypeResolver.resolveFullyQualifiedName(
                                             parameter.getType(), cu, packageName, classMap, symbolSolver);
                                     if (resolvedType != null) {
-                                        saveDependency(sourceClass, sourceFqn, resolvedType, "009_002");
+                                        saveDependency(sourceClass, sourceFqn, resolvedType, "009_002", classMap);
                                     } else {
-                                        saveDependency(sourceClass, sourceFqn, typeName, "009_002");
+                                        saveDependency(sourceClass, sourceFqn, typeName, "009_002", classMap);
                                     }
                                 }
                             });
@@ -1546,9 +1564,9 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                                     String resolvedEntityType = TypeResolver.resolveFullyQualifiedName(
                                                             entityType, cu, packageName, classMap, symbolSolver);
                                                     if (resolvedEntityType != null) {
-                                                        saveDependency(sourceClass, sourceFqn, resolvedEntityType, "009_003");
+                                                        saveDependency(sourceClass, sourceFqn, resolvedEntityType, "009_003", classMap);
                                                     } else {
-                                                        saveDependency(sourceClass, sourceFqn, entityTypeName, "009_003");
+                                                        saveDependency(sourceClass, sourceFqn, entityTypeName, "009_003", classMap);
                                                     }
                                                 }
                                             });
@@ -1584,7 +1602,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                         path = extractAnnotationValue(mappingAnnotation, "path");
                                     }
                                     if (path != null && !path.isEmpty()) {
-                                        saveDependency(sourceClass, sourceFqn, "Path:" + path, "009_004");
+                                        saveDependency(sourceClass, sourceFqn, "Path:" + path, "009_004", classMap);
                                     }
                                 }
                             }
@@ -1606,7 +1624,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                         if (value != null && !value.isEmpty()) {
                                             targetIdentifier += "=" + value;
                                         }
-                                        saveDependency(sourceClass, sourceFqn, targetIdentifier, "009_004");
+                                        saveDependency(sourceClass, sourceFqn, targetIdentifier, "009_004", classMap);
                                     }
                                 });
                             });
@@ -1631,7 +1649,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                                 if (targetClasses != null && !targetClasses.isEmpty()) {
                                     targetIdentifier += ":" + targetClasses;
                                 }
-                                saveDependency(sourceClass, sourceFqn, targetIdentifier, "009_005");
+                                saveDependency(sourceClass, sourceFqn, targetIdentifier, "009_005", classMap);
                             }
                         });
                     }
@@ -1662,7 +1680,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                     
                     // 既存のクラスから適切なsourceClassを見つける、または仮のクラスエンティティを使用
                     ClassEntity sourceClass = findOrCreateProjectClass(project, classMap, sourceFqn, projectName);
-                    saveDependency(sourceClass, sourceFqn, "starter:" + starter, "004_004");
+                    saveDependency(sourceClass, sourceFqn, "starter:" + starter, "004_004", classMap);
                 }
             }
             
@@ -1765,7 +1783,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                         }
                         String sourceFqn = projectName + ".AutoConfiguration";
                         ClassEntity sourceClass = findOrCreateProjectClass(project, classMap, sourceFqn, projectName);
-                        saveDependency(sourceClass, sourceFqn, className, "004_004");
+                        saveDependency(sourceClass, sourceFqn, className, "004_004", classMap);
                     }
                 }
             }
@@ -1826,7 +1844,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             dependency.artifactId,
                             dependency.version != null ? dependency.version : "",
                             dependency.scope != null ? dependency.scope : "compile");
-                    saveDependency(sourceClass, sourceFqn, targetIdentifier, "004_005");
+                    saveDependency(sourceClass, sourceFqn, targetIdentifier, "004_005", classMap);
                 }
             }
             
@@ -1845,7 +1863,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             dependency.group != null ? dependency.group : "",
                             dependency.name != null ? dependency.name : "",
                             dependency.version != null ? dependency.version : "");
-                    saveDependency(sourceClass, sourceFqn, targetIdentifier, "004_005");
+                    saveDependency(sourceClass, sourceFqn, targetIdentifier, "004_005", classMap);
                 }
             } else if (Files.exists(buildGradleKtsPath)) {
                 // build.gradle.ktsファイルも同様に処理（簡易実装）
@@ -1860,7 +1878,7 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                             dependency.group != null ? dependency.group : "",
                             dependency.name != null ? dependency.name : "",
                             dependency.version != null ? dependency.version : "");
-                    saveDependency(sourceClass, sourceFqn, targetIdentifier, "004_005");
+                    saveDependency(sourceClass, sourceFqn, targetIdentifier, "004_005", classMap);
                 }
             }
         } catch (Exception e) {
@@ -2365,10 +2383,28 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
         return hasAnnotation(constructor.getAnnotations(), annotationName);
     }
 
-    private void saveDependency(ClassEntity sourceClass, String sourceFqn, String targetIdentifier, String kindCode) {
+    private void saveDependency(ClassEntity sourceClass, String sourceFqn, String targetIdentifier, String kindCode, Map<String, ClassEntity> classMap) {
         DependencyKindEntity kind = dependencyKindRepository.findByCode(kindCode)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown dependency kind code: " + kindCode));
         ClassDependency dependency = new ClassDependency(sourceClass, sourceFqn, targetIdentifier, kind);
+        
+        // targetIdentifierからtargetClassを解決
+        // パッケージ名が空の場合のマップキーも考慮
+        ClassEntity targetClass = classMap.get(targetIdentifier);
+        if (targetClass == null && targetIdentifier.contains(".")) {
+            // パッケージ名が空の場合の形式も試す
+            String[] parts = targetIdentifier.split("\\.");
+            if (parts.length > 1) {
+                String simpleName = parts[parts.length - 1];
+                String defaultKey = "<default>." + simpleName;
+                targetClass = classMap.get(defaultKey);
+            }
+        }
+        
+        if (targetClass != null) {
+            dependency.setTargetClass(targetClass);
+        }
+        
         classDependencyRepository.save(dependency);
     }
 
@@ -2496,6 +2532,256 @@ public class ClassDependencyAnalysisServiceImpl implements ClassDependencyAnalys
                 classNames,
                 dependencyKindCounts
         );
+    }
+
+    /**
+     * メンバー情報を抽出・保存する
+     */
+    private void parseMembers(List<Path> javaFiles, Path projectRoot, Map<String, ClassEntity> classMap) {
+        JavaParser parser = new JavaParser();
+        
+        for (Path javaFile : javaFiles) {
+            try {
+                CompilationUnit cu = parser.parse(javaFile).getResult().orElse(null);
+                if (cu == null) {
+                    continue;
+                }
+
+                String packageName = cu.getPackageDeclaration()
+                        .map(pd -> pd.getNameAsString())
+                        .orElse("");
+
+                cu.findAll(ClassOrInterfaceDeclaration.class).forEach(classDecl -> {
+                    String className = classDecl.getNameAsString();
+                    String fullQualifiedName = packageName.isEmpty() 
+                            ? className 
+                            : packageName + "." + className;
+                    
+                    String mapKey = packageName.isEmpty() 
+                            ? "<default>." + className 
+                            : fullQualifiedName;
+                    
+                    ClassEntity classEntity = classMap.get(mapKey);
+                    if (classEntity == null) {
+                        return;
+                    }
+
+                    // フィールドを抽出
+                    classDecl.getFields().forEach(field -> {
+                        extractAndSaveField(field, classEntity, cu, packageName, classMap);
+                    });
+
+                    // メソッドを抽出
+                    classDecl.getMethods().forEach(method -> {
+                        extractAndSaveMethod(method, classEntity, cu, packageName, classMap);
+                    });
+
+                    // コンストラクタを抽出
+                    classDecl.getConstructors().forEach(constructor -> {
+                        extractAndSaveConstructor(constructor, classEntity, cu, packageName, classMap);
+                    });
+                });
+            } catch (Exception e) {
+                System.err.println("Failed to parse members from: " + javaFile + " - " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * フィールドを抽出・保存する
+     */
+    private void extractAndSaveField(FieldDeclaration field, ClassEntity classEntity, 
+                                    CompilationUnit cu, String packageName, 
+                                    Map<String, ClassEntity> classMap) {
+        try {
+            MemberType memberType = memberTypeRepository.findByCode("FIELD")
+                    .orElseThrow(() -> new IllegalStateException("MemberType FIELD not found"));
+
+            String visibility = getVisibility(field);
+            Type fieldType = field.getCommonType();
+
+            field.getVariables().forEach(variable -> {
+                String fieldName = variable.getNameAsString();
+                String returnType = TypeResolver.resolveFullyQualifiedName(fieldType, cu, packageName, classMap, null);
+
+                Member member = new Member(classEntity, memberType, fieldName, returnType, visibility);
+                member = memberRepository.save(member);
+
+                // アノテーションを抽出・保存
+                extractAndSaveAnnotations(field.getAnnotations(), member, null);
+            });
+        } catch (Exception e) {
+            System.err.println("Failed to extract field: " + e.getMessage());
+        }
+    }
+
+    /**
+     * メソッドを抽出・保存する
+     */
+    private void extractAndSaveMethod(MethodDeclaration method, ClassEntity classEntity,
+                                     CompilationUnit cu, String packageName,
+                                     Map<String, ClassEntity> classMap) {
+        try {
+            MemberType memberType = memberTypeRepository.findByCode("METHOD")
+                    .orElseThrow(() -> new IllegalStateException("MemberType METHOD not found"));
+
+            String methodName = method.getNameAsString();
+            String visibility = getVisibility(method);
+            Type returnType = method.getType();
+            String returnTypeFqn = returnType != null && !returnType.isVoidType()
+                    ? TypeResolver.resolveFullyQualifiedName(returnType, cu, packageName, classMap, null)
+                    : "void";
+
+            Member member = new Member(classEntity, memberType, methodName, returnTypeFqn, visibility);
+            member = memberRepository.save(member);
+
+            // アノテーションを抽出・保存
+            extractAndSaveAnnotations(method.getAnnotations(), member, null);
+        } catch (Exception e) {
+            System.err.println("Failed to extract method: " + e.getMessage());
+        }
+    }
+
+    /**
+     * コンストラクタを抽出・保存する
+     */
+    private void extractAndSaveConstructor(ConstructorDeclaration constructor, ClassEntity classEntity,
+                                          CompilationUnit cu, String packageName,
+                                          Map<String, ClassEntity> classMap) {
+        try {
+            MemberType memberType = memberTypeRepository.findByCode("CONSTRUCTOR")
+                    .orElseThrow(() -> new IllegalStateException("MemberType CONSTRUCTOR not found"));
+
+            String constructorName = constructor.getNameAsString();
+            String visibility = getVisibility(constructor);
+            // コンストラクタは戻り値型なし
+            String returnType = null;
+
+            Member member = new Member(classEntity, memberType, constructorName, returnType, visibility);
+            member = memberRepository.save(member);
+
+            // アノテーションを抽出・保存
+            extractAndSaveAnnotations(constructor.getAnnotations(), member, null);
+        } catch (Exception e) {
+            System.err.println("Failed to extract constructor: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 可視性を取得する（フィールド用）
+     */
+    private String getVisibility(FieldDeclaration field) {
+        com.github.javaparser.ast.AccessSpecifier visibility = field.getAccessSpecifier();
+        if (visibility == null) {
+            return "PACKAGE_PRIVATE";
+        }
+        switch (visibility) {
+            case PUBLIC:
+                return "PUBLIC";
+            case PROTECTED:
+                return "PROTECTED";
+            case PRIVATE:
+                return "PRIVATE";
+            default:
+                return "PACKAGE_PRIVATE";
+        }
+    }
+
+    /**
+     * 可視性を取得する（メソッド用）
+     */
+    private String getVisibility(MethodDeclaration method) {
+        com.github.javaparser.ast.AccessSpecifier visibility = method.getAccessSpecifier();
+        if (visibility == null) {
+            return "PACKAGE_PRIVATE";
+        }
+        switch (visibility) {
+            case PUBLIC:
+                return "PUBLIC";
+            case PROTECTED:
+                return "PROTECTED";
+            case PRIVATE:
+                return "PRIVATE";
+            default:
+                return "PACKAGE_PRIVATE";
+        }
+    }
+
+    /**
+     * 可視性を取得する（コンストラクタ用）
+     */
+    private String getVisibility(ConstructorDeclaration constructor) {
+        com.github.javaparser.ast.AccessSpecifier visibility = constructor.getAccessSpecifier();
+        if (visibility == null) {
+            return "PACKAGE_PRIVATE";
+        }
+        switch (visibility) {
+            case PUBLIC:
+                return "PUBLIC";
+            case PROTECTED:
+                return "PROTECTED";
+            case PRIVATE:
+                return "PRIVATE";
+            default:
+                return "PACKAGE_PRIVATE";
+        }
+    }
+
+    /**
+     * アノテーションを抽出・保存する
+     */
+    private void extractAndSaveAnnotations(List<AnnotationExpr> annotations, Member member, ClassEntity classEntity) {
+        for (AnnotationExpr annotation : annotations) {
+            try {
+                String annotationName = annotation.getNameAsString();
+                
+                // 完全修飾名を取得（可能な場合）
+                if (annotation.getName().getQualifier().isPresent()) {
+                    annotationName = annotation.getName().getQualifier().get().asString() + "." + annotationName;
+                }
+
+                final Annotation annotationEntity = annotationRepository.save(new Annotation(member, annotationName));
+
+                // アノテーション属性を抽出
+                if (annotation instanceof NormalAnnotationExpr) {
+                    NormalAnnotationExpr normalAnn = (NormalAnnotationExpr) annotation;
+                    normalAnn.getPairs().forEach(pair -> {
+                        String attrName = pair.getNameAsString();
+                        String attrValue = extractAnnotationAttributeValue(pair.getValue());
+                        
+                        AnnotationAttribute attr = new AnnotationAttribute(
+                                annotationEntity, attrName, attrValue);
+                        annotationAttributeRepository.save(attr);
+                    });
+                } else if (annotation instanceof SingleMemberAnnotationExpr) {
+                    SingleMemberAnnotationExpr singleAnn = (SingleMemberAnnotationExpr) annotation;
+                    String attrValue = extractAnnotationAttributeValue(singleAnn.getMemberValue());
+                    
+                    AnnotationAttribute attr = new AnnotationAttribute(
+                            annotationEntity, "value", attrValue);
+                    annotationAttributeRepository.save(attr);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to extract annotation: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * アノテーション属性値を文字列として抽出する
+     */
+    private String extractAnnotationAttributeValue(Expression expr) {
+        if (expr instanceof StringLiteralExpr) {
+            return ((StringLiteralExpr) expr).getValue();
+        } else if (expr instanceof com.github.javaparser.ast.expr.ArrayInitializerExpr) {
+            com.github.javaparser.ast.expr.ArrayInitializerExpr arrayExpr = 
+                (com.github.javaparser.ast.expr.ArrayInitializerExpr) expr;
+            return arrayExpr.getValues().stream()
+                    .map(this::extractAnnotationAttributeValue)
+                    .collect(Collectors.joining(","));
+        } else {
+            return expr.toString();
+        }
     }
 }
 

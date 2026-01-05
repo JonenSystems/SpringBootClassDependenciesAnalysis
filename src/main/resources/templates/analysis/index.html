@@ -25,7 +25,10 @@
                         <div th:if="${#fields.hasErrors('targetProjectPath')}" class="invalid-feedback" 
                              th:errors="*{targetProjectPath}"></div>
                     </div>
-                    <button type="submit" id="analyze-btn" class="btn btn-primary">解析実行</button>
+                    <div class="button-group">
+                        <button type="submit" id="analyze-btn" class="btn btn-primary">解析実行</button>
+                        <a href="/classdiagram/" id="classdiagram-btn" class="btn btn-secondary">クラス図作成</a>
+                    </div>
                 </form>
             </div>
 

@@ -26,5 +26,17 @@ public interface ClassDependencyRepository extends JpaRepository<ClassDependency
     
     @Query("SELECT COUNT(d) FROM ClassDependency d WHERE d.sourceClass.packageInfo = :packageInfo AND d.dependencyKind.code = :dependencyKindCode")
     long countByPackageInfoAndDependencyKindCode(@Param("packageInfo") PackageInfo packageInfo, @Param("dependencyKindCode") String dependencyKindCode);
+    
+    @Query("SELECT d FROM ClassDependency d " +
+           "LEFT JOIN FETCH d.targetClass tc " +
+           "LEFT JOIN FETCH tc.project " +
+           "WHERE d.sourceClass.id = :sourceClassId")
+    List<ClassDependency> findBySourceClass_Id(@Param("sourceClassId") Long sourceClassId);
+    
+    @Query("SELECT d FROM ClassDependency d " +
+           "LEFT JOIN FETCH d.sourceClass sc " +
+           "LEFT JOIN FETCH sc.project " +
+           "WHERE d.targetClass.id = :targetClassId")
+    List<ClassDependency> findByTargetClass_Id(@Param("targetClassId") Long targetClassId);
 }
 

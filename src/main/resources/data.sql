@@ -2,11 +2,18 @@
 SET REFERENTIAL_INTEGRITY FALSE;
 
 -- 全テーブルのデータを削除（AUTO_INCREMENTもリセット）
+TRUNCATE TABLE annotation_attributes;
+TRUNCATE TABLE annotations;
+TRUNCATE TABLE endpoints;
+TRUNCATE TABLE members;
 TRUNCATE TABLE class_dependencies;
 TRUNCATE TABLE classes;
 TRUNCATE TABLE packages;
 TRUNCATE TABLE projects;
 TRUNCATE TABLE dependency_kinds;
+TRUNCATE TABLE http_methods;
+TRUNCATE TABLE class_types;
+TRUNCATE TABLE member_types;
 
 -- 外部キー制約を再有効化
 SET REFERENTIAL_INTEGRITY TRUE;
@@ -71,4 +78,23 @@ INSERT INTO dependency_kinds (code, description) VALUES ('009_002', 'Service→R
 INSERT INTO dependency_kinds (code, description) VALUES ('009_003', 'Repository→Entity');
 INSERT INTO dependency_kinds (code, description) VALUES ('009_004', 'パス/パラメータ依存');
 INSERT INTO dependency_kinds (code, description) VALUES ('009_005', 'テストスライス');
+
+-- HTTPメソッドの初期データ投入
+INSERT INTO http_methods (method_name) VALUES ('GET');
+INSERT INTO http_methods (method_name) VALUES ('POST');
+INSERT INTO http_methods (method_name) VALUES ('PUT');
+INSERT INTO http_methods (method_name) VALUES ('DELETE');
+INSERT INTO http_methods (method_name) VALUES ('PATCH');
+
+-- クラスタイプの初期データ投入
+INSERT INTO class_types (code, description) VALUES ('CLASS', 'クラス');
+INSERT INTO class_types (code, description) VALUES ('INTERFACE', 'インターフェース');
+INSERT INTO class_types (code, description) VALUES ('ENUM', '列挙型');
+INSERT INTO class_types (code, description) VALUES ('ANNOTATION', 'アノテーション');
+INSERT INTO class_types (code, description) VALUES ('RECORD', 'レコード');
+
+-- メンバータイプの初期データ投入
+INSERT INTO member_types (code, description) VALUES ('FIELD', 'フィールド');
+INSERT INTO member_types (code, description) VALUES ('METHOD', 'メソッド');
+INSERT INTO member_types (code, description) VALUES ('CONSTRUCTOR', 'コンストラクタ');
 
