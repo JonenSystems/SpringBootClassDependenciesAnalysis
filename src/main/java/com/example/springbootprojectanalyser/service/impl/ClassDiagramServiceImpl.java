@@ -49,13 +49,23 @@ public class ClassDiagramServiceImpl implements ClassDiagramService {
         // 依存関係マップの作成
         Map<String, Map<String, List<String>>> dependencyMap = buildDependencyMap(targetClasses, projectId);
         
+        // インターフェースクラスのセットを作成（実装関係「001_002」のターゲットになっているクラス）
+        Set<String> interfaceClassFqns = identifyInterfaceClasses(targetClasses, projectId);
+        
+        // 起点クラスのFQNを保持（コントローラクラスを明示的に表現するため）
+        String startClassFqn = startClass.getFullQualifiedName();
+        
+        // エンドポイント情報を取得（URIとHTTPメソッド）
+        String endpointUri = endpoint.getUri();
+        String httpMethod = endpoint.getHttpMethod() != null ? endpoint.getHttpMethod().getMethodName() : "";
+        
         // SPC-201.004-001: クラスダイアログ記載事項の抽出
         // 注意: 現在の実装では、クラス依存関係解析時にメンバー情報は保存されていないため、
         // 依存関係から推測してメンバー情報を生成します
         Map<String, List<MemberInfoDto>> classMemberMap = extractClassMembers(targetClasses, projectId);
         
         // SPC-201.005-001: クラス図の書式生成
-        String classDiagramText = generateMermaidClassDiagram(targetClassList, classMemberMap, dependencyMap);
+        String classDiagramText = generateMermaidClassDiagram(targetClassList, classMemberMap, dependencyMap, interfaceClassFqns, startClassFqn, endpointUri, httpMethod);
         
         return new ClassDiagramDto(classDiagramText, targetClassList, classMemberMap, dependencyMap);
     }
@@ -181,6 +191,36 @@ public class ClassDiagramServiceImpl implements ClassDiagramService {
         }
         
         return false;
+    }
+
+    /**
+     * インターフェースクラスを識別する
+     * 実装関係（依存種類コード「001_002」）のターゲットになっているクラスをインターフェースとみなす
+     */
+    private Set<String> identifyInterfaceClasses(Set<ClassEntity> classes, Long projectId) {
+        Set<String> interfaceFqns = new HashSet<>();
+        
+        for (ClassEntity classEntity : classes) {
+            // このクラスをターゲットとする実装関係（001_002）を検索
+            List<ClassDependency> incomingDependencies = classDependencyRepository
+                .findByTargetClass_Id(classEntity.getId());
+            
+            for (ClassDependency dep : incomingDependencies) {
+                // 実装関係（001_002）のみを対象
+                if (dep.getDependencyKind() != null && 
+                    "001_002".equals(dep.getDependencyKind().getCode()) &&
+                    dep.getSourceClass() != null &&
+                    dep.getSourceClass().getProject() != null &&
+                    dep.getSourceClass().getProject().getId().equals(projectId) &&
+                    classes.contains(dep.getSourceClass())) {
+                    // このクラスが実装関係のターゲットになっている場合、インターフェースとみなす
+                    interfaceFqns.add(classEntity.getFullQualifiedName());
+                    break; // 1つでも見つかればインターフェースと判定
+                }
+            }
+        }
+        
+        return interfaceFqns;
     }
 
     /**
@@ -319,7 +359,11 @@ public class ClassDiagramServiceImpl implements ClassDiagramService {
     private String generateMermaidClassDiagram(
             List<ClassInfoDto> targetClasses,
             Map<String, List<MemberInfoDto>> classMemberMap,
-            Map<String, Map<String, List<String>>> dependencyMap) {
+            Map<String, Map<String, List<String>>> dependencyMap,
+            Set<String> interfaceClassFqns,
+            String startClassFqn,
+            String endpointUri,
+            String httpMethod) {
         
         StringBuilder sb = new StringBuilder();
         sb.append("classDiagram\n");
@@ -328,6 +372,19 @@ public class ClassDiagramServiceImpl implements ClassDiagramService {
         for (ClassInfoDto classInfo : targetClasses) {
             String className = escapeMermaidName(classInfo.simpleName());
             sb.append("    class ").append(className).append(" {\n");
+            
+            // 起点クラス（コントローラクラス）の場合は<<URI(HTTPメソッド)>>を追加
+            if (startClassFqn != null && startClassFqn.equals(classInfo.fullQualifiedName())) {
+                String endpointLabel = formatEndpointLabel(endpointUri, httpMethod);
+                if (endpointLabel != null && !endpointLabel.isEmpty()) {
+                    sb.append("        <<").append(escapeMermaidLabel(endpointLabel)).append(">>\n");
+                }
+            }
+            
+            // インターフェースクラスの場合は<<interface>>を追加
+            if (interfaceClassFqns.contains(classInfo.fullQualifiedName())) {
+                sb.append("        <<interface>>\n");
+            }
             
             // メンバーを追加（重複を削除）
             List<MemberInfoDto> members = classMemberMap.get(classInfo.fullQualifiedName());
@@ -415,6 +472,20 @@ public class ClassDiagramServiceImpl implements ClassDiagramService {
             return code;
         }
         return code + "_" + description;
+    }
+
+    /**
+     * エンドポイントラベルをフォーマットする
+     * 形式: URI(HTTPメソッド)（例：/products(GET)）
+     */
+    private String formatEndpointLabel(String uri, String httpMethod) {
+        if (uri == null || uri.isEmpty()) {
+            return httpMethod != null && !httpMethod.isEmpty() ? "(" + httpMethod + ")" : "";
+        }
+        if (httpMethod == null || httpMethod.isEmpty()) {
+            return uri;
+        }
+        return uri + "(" + httpMethod + ")";
     }
     
     /**
