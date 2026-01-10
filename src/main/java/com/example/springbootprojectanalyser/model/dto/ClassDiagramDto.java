@@ -10,7 +10,8 @@ public record ClassDiagramDto(
     String classDiagramText,
     List<ClassInfoDto> targetClasses,
     Map<String, List<MemberInfoDto>> classMemberMap,
-    Map<String, Map<String, List<String>>> dependencyMap
+    Map<String, Map<String, List<String>>> dependencyMap,
+    Map<String, String> classFilePaths
 ) {
 }
 

@@ -36,12 +36,14 @@ document.addEventListener('DOMContentLoaded', function() {
         downloadButton.addEventListener('click', function() {
             // 隠しフィールドからクラス図テキストを取得
             if (hiddenInput && hiddenInput.value) {
-                const classDiagramText = hiddenInput.value;
+                const classDiagramText = hiddenInput.value.trim();
+                // 先頭に```mermaidを、末尾に```を追加
+                const markdownText = '```mermaid\n' + classDiagramText + '\n```';
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                const fileName = `class-diagram-${timestamp}.mmd`;
+                const fileName = `class-diagram-${timestamp}.md`;
                 
                 // Blobオブジェクトを作成
-                const blob = new Blob([classDiagramText], { type: 'text/plain' });
+                const blob = new Blob([markdownText], { type: 'text/markdown' });
                 const url = URL.createObjectURL(blob);
                 
                 // ダウンロードリンクを作成してクリック

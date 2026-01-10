@@ -74,6 +74,24 @@
                 <div id="mermaid-diagram" class="mermaid"></div>
                 
                 <input type="hidden" id="class-diagram-text" th:value="${classDiagram.classDiagramText}">
+                
+                <!-- 関連ファイル一覧 -->
+                <div th:if="${classDiagram.classFilePaths != null and !classDiagram.classFilePaths.isEmpty()}" class="related-files-section" style="margin-top: 30px;">
+                    <h3>関連ファイル一覧</h3>
+                    <div class="form-group" style="margin-top: 10px; margin-bottom: 20px;">
+                        <a th:href="@{/classdiagram/download-files(projectId=${projectId}, endpointUri=${selectedEndpointUri}, httpMethod=${selectedEndpointHttpMethod})}" 
+                           id="download-files-btn" 
+                           class="btn btn-secondary">連結ファイルをダウンロード</a>
+                    </div>
+                    <ul class="file-list" style="list-style: none; padding: 0;">
+                        <li th:each="entry : ${classDiagram.classFilePaths}" style="padding: 5px 0; border-bottom: 1px solid #eee;">
+                            <span th:text="${entry.value}" style="font-family: monospace; color: #333;"></span>
+                            <span style="color: #666; margin-left: 10px;">（</span>
+                            <span th:text="${entry.key}" style="color: #666;"></span>
+                            <span style="color: #666;">）</span>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </main>
 

@@ -21,14 +21,17 @@ public class ClassDiagramServiceImpl implements ClassDiagramService {
     private final EndpointRepository endpointRepository;
     private final ClassDependencyRepository classDependencyRepository;
     private final MemberRepository memberRepository;
+    private final ProjectRepository projectRepository;
 
     public ClassDiagramServiceImpl(
             EndpointRepository endpointRepository,
             ClassDependencyRepository classDependencyRepository,
-            MemberRepository memberRepository) {
+            MemberRepository memberRepository,
+            ProjectRepository projectRepository) {
         this.endpointRepository = endpointRepository;
         this.classDependencyRepository = classDependencyRepository;
         this.memberRepository = memberRepository;
+        this.projectRepository = projectRepository;
     }
 
     @Override
@@ -64,10 +67,17 @@ public class ClassDiagramServiceImpl implements ClassDiagramService {
         // 依存関係から推測してメンバー情報を生成します
         Map<String, List<MemberInfoDto>> classMemberMap = extractClassMembers(targetClasses, projectId);
         
+        // プロジェクト情報を取得（ファイルパス生成のため）
+        com.example.springbootprojectanalyser.model.entity.Project project = projectRepository.findById(projectId)
+            .orElseThrow(() -> new IllegalArgumentException("プロジェクトが見つかりません"));
+        
+        // 関連ファイルパス情報を生成
+        Map<String, String> classFilePaths = generateClassFilePaths(targetClasses, project.getRootPath());
+        
         // SPC-201.005-001: クラス図の書式生成
         String classDiagramText = generateMermaidClassDiagram(targetClassList, classMemberMap, dependencyMap, interfaceClassFqns, startClassFqn, endpointUri, httpMethod);
         
-        return new ClassDiagramDto(classDiagramText, targetClassList, classMemberMap, dependencyMap);
+        return new ClassDiagramDto(classDiagramText, targetClassList, classMemberMap, dependencyMap, classFilePaths);
     }
 
     /**
@@ -573,6 +583,132 @@ public class ClassDiagramServiceImpl implements ClassDiagramService {
         // 先頭・末尾のアンダースコアを削除
         escaped = escaped.replaceAll("^_+|_+$", "");
         return escaped.isEmpty() ? "Unknown" : escaped;
+    }
+
+    /**
+     * クラスのFQNから実際のファイルパスを検索する
+     * プロジェクトルートからJavaファイルを検索し、クラスのFQNと一致するファイルを見つける
+     */
+    private Map<String, String> generateClassFilePaths(Set<ClassEntity> classes, String projectRootPath) {
+        Map<String, String> filePaths = new HashMap<>();
+        java.nio.file.Path projectRoot = java.nio.file.Paths.get(projectRootPath);
+        
+        try {
+            // プロジェクトルートからJavaファイルを収集
+            List<java.nio.file.Path> javaFiles = new ArrayList<>();
+            try (java.util.stream.Stream<java.nio.file.Path> paths = java.nio.file.Files.walk(projectRoot)) {
+                paths.filter(java.nio.file.Files::isRegularFile)
+                    .filter(p -> p.toString().endsWith(".java"))
+                    .filter(p -> !p.toString().contains("target")) // targetディレクトリを除外
+                    .filter(p -> !p.toString().contains(".git")) // .gitディレクトリを除外
+                    .forEach(javaFiles::add);
+            }
+            
+            // クラスFQNから実際のファイルパスを検索
+            for (ClassEntity classEntity : classes) {
+                String fqn = classEntity.getFullQualifiedName();
+                if (fqn == null || fqn.isEmpty()) {
+                    continue;
+                }
+                
+                // FQNからパッケージ名とクラス名を分離
+                int lastDotIndex = fqn.lastIndexOf('.');
+                String packageName = lastDotIndex >= 0 ? fqn.substring(0, lastDotIndex) : "";
+                String className = lastDotIndex >= 0 ? fqn.substring(lastDotIndex + 1) : fqn;
+                
+                // パッケージ名をディレクトリパスに変換
+                String packagePath = packageName.replace('.', '/');
+                
+                // 可能なファイルパスを生成（src/main/javaまたはsrc/test/javaを試行）
+                List<String> possiblePaths = new ArrayList<>();
+                if (packagePath.isEmpty()) {
+                    possiblePaths.add("src/main/java/" + className + ".java");
+                    possiblePaths.add("src/test/java/" + className + ".java");
+                } else {
+                    possiblePaths.add("src/main/java/" + packagePath + "/" + className + ".java");
+                    possiblePaths.add("src/test/java/" + packagePath + "/" + className + ".java");
+                }
+                
+                // 実際のファイルを検索
+                String foundPath = null;
+                for (java.nio.file.Path javaFile : javaFiles) {
+                    // プロジェクトルートからの相対パスを取得
+                    try {
+                        String relativePath = projectRoot.relativize(javaFile).toString().replace('\\', '/');
+                        
+                        // ファイル名で一致するか確認
+                        String fileName = javaFile.getFileName().toString();
+                        if (fileName.equals(className + ".java")) {
+                            // ファイル内容をパースしてFQNを確認
+                            try {
+                                com.github.javaparser.JavaParser parser = new com.github.javaparser.JavaParser();
+                                com.github.javaparser.ast.CompilationUnit cu = parser.parse(javaFile).getResult().orElse(null);
+                                if (cu != null) {
+                                    String filePackageName = cu.getPackageDeclaration()
+                                        .map(pd -> pd.getNameAsString())
+                                        .orElse("");
+                                    
+                                    // ラムダ式の代わりに通常のループを使用
+                                    List<com.github.javaparser.ast.body.ClassOrInterfaceDeclaration> classDecls = 
+                                        cu.findAll(com.github.javaparser.ast.body.ClassOrInterfaceDeclaration.class);
+                                    
+                                    for (com.github.javaparser.ast.body.ClassOrInterfaceDeclaration classDecl : classDecls) {
+                                        String fileClassName = classDecl.getNameAsString();
+                                        String fileFqn = filePackageName.isEmpty() 
+                                            ? fileClassName 
+                                            : filePackageName + "." + fileClassName;
+                                        if (fileFqn.equals(fqn)) {
+                                            foundPath = relativePath;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (foundPath != null) {
+                                        break;
+                                    }
+                                }
+                            } catch (Exception e) {
+                                // パースエラーは無視して次のファイルへ
+                            }
+                        }
+                    } catch (Exception e) {
+                        // 相対パス取得エラーは無視
+                    }
+                }
+                
+                // ファイルが見つからない場合は、予測パスを使用
+                if (foundPath != null) {
+                    filePaths.put(fqn, foundPath);
+                } else if (!possiblePaths.isEmpty()) {
+                    // 最初の可能なパスを使用（実際のファイルが存在するかは後で確認）
+                    filePaths.put(fqn, possiblePaths.get(0));
+                }
+            }
+        } catch (Exception e) {
+            // エラーが発生した場合、予測パスのみを使用
+            for (ClassEntity classEntity : classes) {
+                String fqn = classEntity.getFullQualifiedName();
+                if (fqn == null || fqn.isEmpty()) {
+                    continue;
+                }
+                
+                int lastDotIndex = fqn.lastIndexOf('.');
+                String packageName = lastDotIndex >= 0 ? fqn.substring(0, lastDotIndex) : "";
+                String className = lastDotIndex >= 0 ? fqn.substring(lastDotIndex + 1) : fqn;
+                String packagePath = packageName.replace('.', '/');
+                
+                String filePath;
+                if (packagePath.isEmpty()) {
+                    filePath = "src/main/java/" + className + ".java";
+                } else {
+                    filePath = "src/main/java/" + packagePath + "/" + className + ".java";
+                }
+                
+                filePaths.put(fqn, filePath);
+            }
+        }
+        
+        return filePaths;
     }
 }
 
